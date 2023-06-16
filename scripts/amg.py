@@ -12,6 +12,7 @@ import argparse
 import json
 import os
 from typing import Any, Dict, List
+from tqdm import tqdm
 
 parser = argparse.ArgumentParser(
     description=(
@@ -210,6 +211,7 @@ def main(args: argparse.Namespace) -> None:
 
     os.makedirs(args.output, exist_ok=True)
 
+    bar = tqdm(total=len(targets))
     for t in targets:
         print(f"Processing '{t}'...")
         image = cv2.imread(t)
@@ -230,7 +232,9 @@ def main(args: argparse.Namespace) -> None:
             save_file = save_base + ".json"
             with open(save_file, "w") as f:
                 json.dump(masks, f)
+        bar.update(1)
     print("Done!")
+    bar.close()
 
 
 if __name__ == "__main__":
