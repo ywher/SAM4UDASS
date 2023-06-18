@@ -14,6 +14,7 @@ from cityscapesscripts.helpers.labels import trainId2label as trainid2label
 import numpy as np
 import tqdm
 from utils.shrink_mask import shrink_region
+from matplotlib import pyplot as plt
 
 def get_parse():
     parse = argparse.ArgumentParser()
@@ -23,6 +24,8 @@ def get_parse():
                        default='/media/yons/pool1/ywh/projects/UDA/MIC/seg/work_dirs/local-exp80/230422_0820_gtaHR2csHR_1024x1024_dacs_a999_fdthings_rcs001-20_cpl2_m64-07-spta_hrda1-512-01_daformer_sepaspp_sl_mitb5_poly10warm_3e-05_s0_21197/pred_trainid')
     parse.add_argument('--image_folder', type=str, help='the path to the original image',
                        default='/media/yons/pool1/ywh/dataset/cityscapes/leftImg8bit/train_all')
+    parse.add_argument('--gt_folder', type=str, help='the path to the ground truth',
+                       default='/media/yons/pool1/ywh/dataset/cityscapes/gtFine/train_all')
     parse.add_argument('--mix_ratio', type=float, help='the ratio of the model prediction', default=0.5)
     parse.add_argument('--resize_ratio', type=float, help='the resize ratio of mix image', default=0.5)
     parse.add_argument('--output_folder', type=str, help='the path to save the fusion result',
@@ -273,13 +276,16 @@ class Fusion():
         #     return label_object.color   
 
 class Fusion2():
-    def __init__(self, mask_folder, segmentation_folder, image_folder, mix_ratio,
+    def __init__(self, mask_folder, segmentation_folder, image_folder, gt_folder, mix_ratio,
                  resize_ratio, output_folder, mask_suffix, segmentation_suffix, segmentation_suffix_noimg,
-                 fusion_mode, sam_classes, shrink_num):
+                 gt_suffix, fusion_mode, sam_classes, shrink_num, display_size=(200,400)):
         #the path to the sam mask
         self.mask_folder = mask_folder
         #the path to the uda prediction
         self.segmentation_folder = segmentation_folder
+        #the path to the ground truth folder
+        self.gt_folder = gt_folder
+        self.gt_color_folder = self.gt_folder.replace('train_all', 'train_gt_color')
         #the path to the original image
         self.image_folder = image_folder
         #the mix ratio of the fusion result and origianl image
@@ -292,12 +298,16 @@ class Fusion2():
         self.mask_suffix = mask_suffix
         self.segmentation_suffix = segmentation_suffix
         self.segmentation_suffix_noimg = segmentation_suffix_noimg
+        #the gt suffix
+        self.gt_suffix = gt_suffix
         #the fusion mode
         self.fusion_mode = fusion_mode
         #the classes sam performs better
         self.sam_classes = sam_classes
         #the shrink num of segmentation mask
         self.shrink_num = shrink_num
+        #the size of the image
+        self.display_size=display_size
         
         self.image_names = os.listdir(self.mask_folder) #one folder corresponds to one image name without suffix
         self.image_names.sort()
@@ -310,7 +320,7 @@ class Fusion2():
         self.check_and_make(os.path.join(self.output_folder, 'trainID_bg')) #the fusion result in trainID with segmenation result as the background
         # self.check_and_make(os.path.join(self.output_folder, 'color_bg')) #the fusion result in color with segmenation result as the background
         self.check_and_make(os.path.join(self.output_folder, 'mixed_bg')) #the fusion result in color mixed with original image with segmenation result as the background
-        
+        self.check_and_make(os.path.join(self.output_folder, 'horizontal'))
     def check_and_make(self, path):
         if not os.path.exists(path):
             os.makedirs(path)
@@ -507,8 +517,35 @@ class Fusion2():
         #     label_object = trainid2label[trainid]
         #     return label_object.color   
 
+    def display_images_horizontally(self, images, image_name):
+    # 获取最大高度和总宽度
+        max_height = max(image.shape[0] for image in images)
+        total_width = sum(image.shape[1] for image in images)
+        new_height = self.display_size[0] * 2
+        new_total_width = self.display_size[1] * len(images) // 2
 
+        # 创建一个新的空白画布
+        output_image = np.zeros((new_height, new_total_width, 3), dtype=np.uint8)
 
+        # 逐个将图像水平放置在画布上
+        current_width = 0
+        for i, image in enumerate(images):
+            image = cv2.resize(image, (self.display_size[1], self.display_size[0]), \
+                interpolation=cv2.INTER_LINEAR)
+            if i < len(images) // 2:
+                output_image[0:image.shape[0], current_width:current_width+image.shape[1], :] = image
+            else:
+                output_image[image.shape[0]:, current_width:current_width+image.shape[1], :] = image
+            # output_image[0:image.shape[0], current_width:current_width+image.shape[1], :] = image
+            current_width += image.shape[1]
+            current_width = current_width % new_total_width
+
+        # 显示结果图像
+        cv2.imwrite(os.path.join(self.output_folder, 'horizontal', image_name + self.mask_suffix), output_image)
+        cv2.imshow('Images', output_image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+    
 def main():
     args = get_parse()
     fusion = Fusion(args)

@@ -18,6 +18,7 @@ wheels/
 images/
 outputs/
 outputs_tmp/
+SAM_WSSS/
 # pytorch/python/numpy formats
 *.pth
 *.pkl
