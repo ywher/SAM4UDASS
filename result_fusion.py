@@ -15,6 +15,7 @@ import numpy as np
 import tqdm
 from utils.shrink_mask import shrink_region
 from matplotlib import pyplot as plt
+import pandas as pd
 
 def get_parse():
     parse = argparse.ArgumentParser()
@@ -308,6 +309,7 @@ class Fusion2():
         self.shrink_num = shrink_num
         #the size of the image
         self.display_size=display_size
+        self.label_names = [trainid2label[train_id].name for train_id in range(19)]
         
         self.image_names = os.listdir(self.mask_folder) #one folder corresponds to one image name without suffix
         self.image_names.sort()
@@ -321,6 +323,7 @@ class Fusion2():
         # self.check_and_make(os.path.join(self.output_folder, 'color_bg')) #the fusion result in color with segmenation result as the background
         self.check_and_make(os.path.join(self.output_folder, 'mixed_bg')) #the fusion result in color mixed with original image with segmenation result as the background
         self.check_and_make(os.path.join(self.output_folder, 'horizontal'))
+        self.check_and_make(os.path.join(self.output_folder, 'ious'))
     def check_and_make(self, path):
         if not os.path.exists(path):
             os.makedirs(path)
@@ -335,7 +338,8 @@ class Fusion2():
         '''
         # get the mask names
         mask_names = [name for name in os.listdir(os.path.join(self.mask_folder, image_name)) if self.mask_suffix in name]
-
+        mask_names.sort()
+        
         # sort the mask names accrording to the mask area from large to small
         # mask_areas = []
         # for mask_name in mask_names:
@@ -349,11 +353,35 @@ class Fusion2():
         for mask_name in mask_names:
             mask_path = os.path.join(self.mask_folder, image_name, mask_name)
             mask = cv2.imread(mask_path)  # [h,w,3]
+            # print('mask name', mask_name)
+            # cv2.imshow('mask', cv2.resize(mask, (512,256)))
+            # cv2.waitKey(100)
+            # cv2.destroyAllWindows()
             # get the number of trainids in the segmentation result using the mask with value 255
             trainids = segmentation[:, :, 0][mask[:, :, 0] == 255]
             num_ids, counts = np.unique(trainids, return_counts=True)
+            #sort the num_ids according to the counts
+            num_ids = [num_id for _, num_id in sorted(zip(counts, num_ids), reverse=True)]
+            counts = sorted(counts, reverse=True)
+            # print the top 3 classes
+            # print('image_name: ', image_name)
+            # print('class', num_ids[:3])
+            # print('class names', [self.label_names[num_id] for num_id in num_ids[:3]])
+            # print('counts', counts[:3])
             # get the most frequent trainid
-            most_freq_id = num_ids[np.argmax(counts)]
+            most_freq_id = num_ids[0]
+            if len(counts) >= 2:
+                if num_ids[0] == 2 and num_ids[1] == 5 and counts[1] / counts[0] >= 0.2:
+                    # if the building is the first class and the pole is the second class, 
+                    # and the ratio of pole to building is larger than 0.25
+                    # then assign the mask with pole
+                    most_freq_id = num_ids[1]
+                elif num_ids[0] == 2 and num_ids[1] == 7 and counts[1] / counts[0] >= 0.1:
+                    # if the building is the first class and the vegetation is the second class,
+                    most_freq_id = num_ids[1]
+                elif num_ids[0] == 7 and num_ids[1] == 8 and counts[1] / counts[0] >= 0.05:
+                    # if the vegetation is the first class and the terrain is the second class,
+                    most_freq_id = num_ids[1]
             # fill the sam mask using the most frequent trainid in segmentation
             sam_mask[mask[:, :, 0] == 255] = most_freq_id
         
@@ -468,7 +496,39 @@ class Fusion2():
         fusion_color = self.color_segmentation(fusion_trainid)
         
         return fusion_trainid, fusion_color
-     
+    
+    def fusion_mode_2(self, segmentation, sam_pred):
+        '''
+        segmentation: [h, w, 3]
+        sam_pred: [h, w]
+        '''
+        fusion_trainid_0, fusion_color_0 = self.fusion_mode_0(segmentation, sam_pred)
+        #fusion_trainid_0: [h, w], fusion_color_0: [h, w, 3]
+        # 预测结果为road但是sam中和road对应的类别为sidewalk(分割成了同一个mask)，将预测结果改为road
+        mask_road = ((segmentation[:, :, 0] == 0) & (fusion_trainid_0 == 1))
+        # 预测结果为siwa但是sam中和siwa对应的类别为road(分割成了同一个mask)，将预测结果改为siwa
+        mask_siwa = ((segmentation[:, :, 0] == 1) & (fusion_trainid_0 == 0))
+        # 预测结果为fence但是sam中和fence对应的类别为wall(分割成了同一个mask)，将预测结果改为fence
+        mask_fenc = ((segmentation[:, :, 0] == 4) & (fusion_trainid_0 == 3))\
+        # 预测结果为pole但是sam中和pole对应的类别为sign/light(分割成了同一个mask)，将预测结果改为pole
+        mask_pole = ((segmentation[:, :, 0] == 5) & (fusion_trainid_0 == 7))\
+                    | ((segmentation[:, :, 0] == 5) & (fusion_trainid_0 == 6))
+        # 预测结果为ligh但是sam中和ligh对应的类别为building/vegetation/pole(分割成了同一个mask)，将预测结果改为ligh
+        mask_ligh = ((segmentation[:, :, 0] == 6) & (fusion_trainid_0 == 2)) \
+                    | ((segmentation[:, :, 0] == 6) & (fusion_trainid_0 == 8)) \
+                    | ((segmentation[:, :, 0] == 6) & (fusion_trainid_0 == 5))
+        # 预测结果为sign但是sam中和sign对应的类别为building(分割成了同一个mask)，将预测结果改为sign
+        mask_sign = ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 2))\
+                    | ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 8))
+        fusion_trainid_0[mask_road] = 0
+        fusion_trainid_0[mask_siwa] = 1
+        fusion_trainid_0[mask_fenc] = 4
+        fusion_trainid_0[mask_pole] = 5
+        fusion_trainid_0[mask_ligh] = 6
+        fusion_trainid_0[mask_sign] = 7
+        fusion_color_0 = self.color_segmentation(fusion_trainid_0)
+        return fusion_trainid_0, fusion_color_0
+        
     def fusion_mode_3(self, segmentation, sam_pred):
         fusion_trainid, fusion_color = self.fusion_mode_0(segmentation=segmentation, sam_pred=sam_pred)
         unique_classes = np.unique(fusion_trainid)
@@ -517,12 +577,33 @@ class Fusion2():
         #     label_object = trainid2label[trainid]
         #     return label_object.color   
 
-    def display_images_horizontally(self, images, image_name):
-    # 获取最大高度和总宽度
+    def display_images_horizontally(self, images, image_name, miou):
+        '''
+        function:
+            display the images horizontally and save the result
+        input:
+            images: a list of images,
+                    [image, ground truth, sam seg, model seg,
+                    fusion_0_result, fusion_1_result, fusion_2_result]
+            images_name: the name of the image
+            miou: a list of miou and ious
+        '''
+        # 获取最大高度和总宽度
         max_height = max(image.shape[0] for image in images)
         total_width = sum(image.shape[1] for image in images)
-        new_height = self.display_size[0] * 2
-        new_total_width = self.display_size[1] * len(images) // 2
+        row = 2
+        col = (len(images) + 1) // 2
+        new_height = self.display_size[0] * row
+        new_total_width = self.display_size[1] * col
+        
+        #显示的文本列表
+        texts = ['Image', 'Ground Truth', 'SAM', 'Segmentation']
+        for i, (miou, ious) in enumerate(miou):
+            #cal the non-zero classes in ious
+            unique_classes = np.sum(np.array(ious) != 0)
+            mIOU2 = np.sum(np.array(ious)) / unique_classes
+            texts.append('f_{}, mIoU19: {:.2f} mIoU{}: {:.2f}'.format(i, miou * 100, \
+                unique_classes, mIOU2 * 100))
 
         # 创建一个新的空白画布
         output_image = np.zeros((new_height, new_total_width, 3), dtype=np.uint8)
@@ -532,19 +613,39 @@ class Fusion2():
         for i, image in enumerate(images):
             image = cv2.resize(image, (self.display_size[1], self.display_size[0]), \
                 interpolation=cv2.INTER_LINEAR)
-            if i < len(images) // 2:
+            image = cv2.putText(image, texts[i], (20, 50), \
+                    fontFace=cv2.FONT_HERSHEY_COMPLEX, fontScale= 1, color=(0, 0, 255), thickness=2)
+            if i < col:
                 output_image[0:image.shape[0], current_width:current_width+image.shape[1], :] = image
             else:
                 output_image[image.shape[0]:, current_width:current_width+image.shape[1], :] = image
             # output_image[0:image.shape[0], current_width:current_width+image.shape[1], :] = image
             current_width += image.shape[1]
             current_width = current_width % new_total_width
-
+        
         # 显示结果图像
         cv2.imwrite(os.path.join(self.output_folder, 'horizontal', image_name + self.mask_suffix), output_image)
-        cv2.imshow('Images', output_image)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        # cv2.imshow('Images', output_image)
+        # cv2.waitKey(100)
+        # cv2.destroyAllWindows()
+    
+    def save_ious(self, miou_0, ious_0, miou_1, ious_1, miou_2, ious_2, image_name):
+        miou_diff_1_0 = round((miou_1 - miou_0) * 100, 2)
+        miou_diff_2_0 = round((miou_2 - miou_0) * 100, 2)
+        iou_diff_1_0 = [round((ious_1[i] - ious_0[i]) * 100, 2) for i in range(len(ious_0))]
+        iou_diff_2_0 = [round((ious_2[i] - ious_0[i]) * 100, 2) for i in range(len(ious_0))]
+        data = pd.DataFrame({
+            'class': ['mIoU'] + [name for name in self.label_names],
+            'Fusion 0': [round(miou_0 * 100, 2)] + [round(ious_0[i] * 100, 2) for i in range(len(ious_0))],
+            'Fusion 1': [round(miou_1 * 100, 2)] + [round(ious_1[i] * 100, 2) for i in range(len(ious_1))],
+            'Fusion 2': [round(miou_2 * 100, 2)] + [round(ious_2[i] * 100, 2) for i in range(len(ious_2))],
+            'Differ_1_0': [miou_diff_1_0] + iou_diff_1_0,
+            'Differ_2_0': [miou_diff_2_0] + iou_diff_2_0
+        })
+
+        #save the miou and class ious
+        data.to_csv(os.path.join(self.output_folder, 'ious', image_name + '.csv'), index=False)
+        
     
 def main():
     args = get_parse()
