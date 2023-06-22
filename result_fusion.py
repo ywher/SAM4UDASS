@@ -16,6 +16,7 @@ import tqdm
 from utils.shrink_mask import shrink_region
 # from matplotlib import pyplot as plt
 import pandas as pd
+import copy
 from utils.mask_shape import Mask_Shape
 
 
@@ -378,30 +379,29 @@ class Fusion2():
             # get the most frequent trainid
             most_freq_id = num_ids[0]
             
-            # if len(counts) >= 2:
-            #     pass
-            #     if num_ids[0] == 2 and num_ids[1] == 5 and counts[1] / counts[0] >= 0.2:
-            #         # [building, pole]
-            #         # if the building is the first class and the pole is the second class, 
-            #         # and the ratio of pole to building is larger than 0.25
-            #         # then assign the mask with pole
-            #         most_freq_id = num_ids[1]
-            #     elif num_ids[0] == 2 and num_ids[1] == 7 and counts[1] / counts[0] >= 0.1:
-            #         # [building, traffic sign]
-            #         # if the building is the first class and the traffic sign is the second class,
-            #         mask_shape = Mask_Shape(mask)
-            #         if mask_shape.is_approx_rectangular() or mask_shape.is_approx_triangular():
-            #             # if the mask is rectangular or triangular, 
-            #             # then assign the mask with traffic sign
-            #             most_freq_id = num_ids[1]
-            #         # most_freq_id = num_ids[1]
-            #     elif num_ids[0] == 8 and num_ids[1] == 9 and counts[1] / counts[0] >= 0.05:
-            #         # [traffic sign, vegetation]
-            #         # if the vegetation is the first class and the terrain is the second class,
-            #         most_freq_id = num_ids[1]
-            #     elif num_ids[0] == 3 and num_ids[1] == 4 and counts[1] / counts[0] >= 0.25:
-            #         # [wall, fence]
-            #         most_freq_id = num_ids[1]
+            if len(counts) >= 2:
+                if num_ids[0] == 2 and num_ids[1] == 5 and counts[1] / counts[0] >= 0.2:
+                    # [building, pole]
+                    # if the building is the first class and the pole is the second class, 
+                    # and the ratio of pole to building is larger than 0.25
+                    # then assign the mask with pole
+                    most_freq_id = num_ids[1]
+                elif num_ids[0] == 2 and num_ids[1] == 7 and counts[1] / counts[0] >= 0.1:
+                    # [building, traffic sign]
+                    # if the building is the first class and the traffic sign is the second class,
+                    mask_shape = Mask_Shape(mask)
+                    if mask_shape.is_approx_rectangular() or mask_shape.is_approx_triangular():
+                        # if the mask is rectangular or triangular, 
+                        # then assign the mask with traffic sign
+                        most_freq_id = num_ids[1]
+                    # most_freq_id = num_ids[1]
+                elif num_ids[0] == 8 and num_ids[1] == 9 and counts[1] / counts[0] >= 0.05:
+                    # [traffic sign, vegetation]
+                    # if the vegetation is the first class and the terrain is the second class,
+                    most_freq_id = num_ids[1]
+                elif num_ids[0] == 3 and num_ids[1] == 4 and counts[1] / counts[0] >= 0.25:
+                    # [wall, fence]
+                    most_freq_id = num_ids[1]
             
             # fill the sam mask using the most frequent trainid in segmentation
             sam_mask[mask[:, :, 0] == 255] = most_freq_id
@@ -482,7 +482,7 @@ class Fusion2():
             # fusion = cv2.addWeighted(image, 0.5, fusion, 0.5, 0)
             # cv2.imwrite(os.path.join(self.output_folder, image_name + self.mask_suffix), fusion)
     
-    def fusion_mode_0(self, segmentation, sam_pred):
+    def fusion_mode_1(self, segmentation, sam_pred):
         #initialize the fusion mask in trainid, fusion mask in color
         fusion_trainid = np.ones_like(segmentation[:, :, 0], dtype=np.uint8) * 255
         train_ids = np.unique(sam_pred)
@@ -502,7 +502,7 @@ class Fusion2():
         
         return fusion_trainid_bg, fusion_color_bg
     
-    def fusion_mode_1(self, segmentation, sam_pred):
+    def fusion_mode_2(self, segmentation, sam_pred):
         #initialize the fusion mask in trainid, fusion mask in color
         fusion_trainid = np.ones_like(segmentation[:, :, 0], dtype=np.uint8) * 255
         fusion_trainid = segmentation[:, :, 0].copy() #fill the fusion result all with segmentation result
@@ -518,12 +518,12 @@ class Fusion2():
         
         return fusion_trainid, fusion_color
     
-    def fusion_mode_2(self, segmentation, sam_pred):
+    def fusion_mode_3(self, segmentation, sam_pred):
         '''
         segmentation: [h, w, 3]
         sam_pred: [h, w]
         '''
-        fusion_trainid_0, fusion_color_0 = self.fusion_mode_0(segmentation, sam_pred)
+        fusion_trainid_0, fusion_color_0 = self.fusion_mode_1(segmentation, sam_pred)
         # fusion_trainid_0: [h, w], fusion_color_0: [h, w, 3]
         # # 预测结果为road但是sam中和road对应的类别为sidewalk(分割成了同一个mask)，将预测结果改为road
         # mask_road = ((segmentation[:, :, 0] == 0) & (fusion_trainid_0 == 1))
@@ -567,7 +567,14 @@ class Fusion2():
         fusion_color_0 = self.color_segmentation(fusion_trainid_0)
         return fusion_trainid_0, fusion_color_0
         
-    def fusion_mode_3(self, segmentation, sam_pred):
+    def fusion_mode_4(self, segmentation, sam_pred):
+        '''
+        based on fusion mode 0
+        '''
+        fusion_trainid, fusion_color = self.fusion_mode_2(segmentation=segmentation, sam_pred=sam_pred)
+        return fusion_trainid, fusion_color
+    
+    def fusion_mode_5(self, segmentation, sam_pred):
         fusion_trainid, fusion_color = self.fusion_mode_0(segmentation=segmentation, sam_pred=sam_pred)
         unique_classes = np.unique(fusion_trainid)
         unique_classes = unique_classes[unique_classes != 255]
@@ -620,17 +627,19 @@ class Fusion2():
         function:
             display the images horizontally and save the result
         input:
-            images: a list of images,
+            images: a list of images, 3 * 4 = 12 images
                     [image, ground truth, sam seg, model seg,
-                    fusion_0_result, fusion_1_result, fusion_2_result]
+                    fusion_1_result, fusion_2_result, fusion_3_result, fusion_4_result,
+                    error_1, error_2, error_3, error_4]
             images_name: the name of the image
-            miou: a list of miou and ious
+            miou: a list of miou and ious,
+                    (miou_1, ious_1), (miou_2, ious_2),(miou_3, ious_3), (miou_4, ious_4)
         '''
         # 获取最大高度和总宽度
         max_height = max(image.shape[0] for image in images)
         total_width = sum(image.shape[1] for image in images)
-        row = 2
-        col = (len(images) + 1) // 2
+        row = 3
+        col = (len(images) + 1) // row
         gap = 10  # the gap between two images horizontally
         new_height = self.display_size[0] * row
         new_total_width = (self.display_size[1] + gap) * col
@@ -641,8 +650,10 @@ class Fusion2():
             #cal the non-zero classes in ious
             unique_classes = np.sum(np.array(ious) != 0)
             mIOU2 = np.sum(np.array(ious)) / unique_classes
-            texts.append('f_{}, mIoU19: {:.2f} mIoU{}: {:.2f}'.format(i, miou * 100, \
+            texts.append('f_{}, mIoU19: {:.2f} mIoU{}: {:.2f}'.format(i+1, miou * 100, \
                 unique_classes, mIOU2 * 100))
+        for i in range(len(miou)):
+            texts.append('Error image f_{}'.format(i+1))
 
         # 创建一个新的空白画布
         output_image = np.zeros((new_height, new_total_width, 3), dtype=np.uint8)
@@ -656,8 +667,10 @@ class Fusion2():
                     fontFace=cv2.FONT_HERSHEY_COMPLEX, fontScale= 1, color=(0, 0, 255), thickness=2)
             if i < col:
                 output_image[0:image.shape[0], current_width:current_width+image.shape[1], :] = image
+            elif col <= i < 2 * col:
+                output_image[image.shape[0]:2*image.shape[0], current_width:current_width+image.shape[1], :] = image
             else:
-                output_image[image.shape[0]:, current_width:current_width+image.shape[1], :] = image
+                output_image[2*image.shape[0]:, current_width:current_width+image.shape[1], :] = image
             # output_image[0:image.shape[0], current_width:current_width+image.shape[1], :] = image
             current_width += (image.shape[1] + gap)
             current_width = current_width % new_total_width
@@ -668,23 +681,45 @@ class Fusion2():
         # cv2.waitKey(100)
         # cv2.destroyAllWindows()
     
-    def save_ious(self, miou_0, ious_0, miou_1, ious_1, miou_2, ious_2, image_name):
-        miou_diff_1_0 = round((miou_1 - miou_0) * 100, 2)
-        miou_diff_2_0 = round((miou_2 - miou_0) * 100, 2)
-        iou_diff_1_0 = [round((ious_1[i] - ious_0[i]) * 100, 2) for i in range(len(ious_0))]
-        iou_diff_2_0 = [round((ious_2[i] - ious_0[i]) * 100, 2) for i in range(len(ious_0))]
+    def save_ious(self, miou_1, ious_1, miou_2, ious_2, miou_3, ious_3, miou_4, ious_4, image_name):
+        miou_diff_2_1 = round((miou_2 - miou_1) * 100, 2)
+        miou_diff_3_1 = round((miou_3 - miou_1) * 100, 2)
+        miou_diff_4_1 = round((miou_4 - miou_1) * 100, 2) 
+        iou_diff_2_1 = [round((ious_2[i] - ious_1[i]) * 100, 2) for i in range(len(ious_1))]
+        iou_diff_3_1 = [round((ious_3[i] - ious_1[i]) * 100, 2) for i in range(len(ious_1))]
+        iou_diff_4_1 = [round((ious_4[i] - ious_1[i]) * 100, 2) for i in range(len(ious_1))]
         data = pd.DataFrame({
             'class': ['mIoU'] + [name for name in self.label_names],
-            'Fusion 0': [round(miou_0 * 100, 2)] + [round(ious_0[i] * 100, 2) for i in range(len(ious_0))],
             'Fusion 1': [round(miou_1 * 100, 2)] + [round(ious_1[i] * 100, 2) for i in range(len(ious_1))],
             'Fusion 2': [round(miou_2 * 100, 2)] + [round(ious_2[i] * 100, 2) for i in range(len(ious_2))],
-            'Differ_1_0': [miou_diff_1_0] + iou_diff_1_0,
-            'Differ_2_0': [miou_diff_2_0] + iou_diff_2_0
+            'Fusion 3': [round(miou_3 * 100, 2)] + [round(ious_3[i] * 100, 2) for i in range(len(ious_3))],
+            'Fusion 4': [round(miou_4 * 100, 2)] + [round(ious_4[i] * 100, 2) for i in range(len(ious_4))],
+            'Differ_2_1': [miou_diff_2_1] + iou_diff_2_1,
+            'Differ_3_1': [miou_diff_3_1] + iou_diff_3_1,
+            'Differ_4_1': [miou_diff_4_1] + iou_diff_4_1,
         })
 
         #save the miou and class ious
         data.to_csv(os.path.join(self.output_folder, 'ious', image_name + '.csv'), index=False)
+    
+    def get_error_image(self, predicted, ground_truth, pred_color):
+        '''
+        function: get the error image
+        input: predicted, ground_truth
+            predicted: [H, W]
+            ground_truth: [H, W]
+            pred_color: [H, W, 3]
+        output: error_image on pred_color
+        '''
         
+        error_mask = np.where((predicted != ground_truth) & (ground_truth != 255), 0, 255).astype(np.uint8)
+        # predicted_color = self.color_segmentation(predicted)
+        # change the area of error mask in pred_color to white
+        pred_color_copy = copy.deepcopy(pred_color)
+        pred_color_copy[error_mask == 0] = [255, 255, 255]
+        
+        # error_mask[pred != gt] = 255
+        return pred_color_copy
 
 def main():
     args = get_parse()
