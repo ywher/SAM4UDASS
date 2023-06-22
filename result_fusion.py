@@ -14,8 +14,10 @@ from cityscapesscripts.helpers.labels import trainId2label as trainid2label
 import numpy as np
 import tqdm
 from utils.shrink_mask import shrink_region
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 import pandas as pd
+from utils.mask_shape import Mask_Shape
+
 
 def get_parse():
     parse = argparse.ArgumentParser()
@@ -43,35 +45,37 @@ def get_parse():
     parse.add_argument('--shrink_num', type=int, default=2, help='the shrink num of segmentation mask')
     return parse.parse_args()
 
+
 class Fusion():
     def __init__(self, args):
-        #the path to the sam mask
+        # the path to the sam mask
         self.mask_folder = args.mask_folder
-        #the path to the uda prediction
+        # the path to the uda prediction
         self.segmentation_folder = args.segmentation_folder
-        #the path to the original image
+        # the path to the original image
         self.image_folder = args.image_folder
-        #the mix ratio of the fusion result and origianl image
+        # the mix ratio of the fusion result and origianl image
         self.mix_ratio = args.mix_ratio
-        #the resize ratio of the mix image
+        # the resize ratio of the mix image
         self.resize_ratio = args.resize_ratio
-        #the path to the output folder
+        # the path to the output folder
         self.output_folder = args.output_folder
-        #the image suffix of the mask and segmentation result
+        # the image suffix of the mask and segmentation result
         self.mask_suffix = args.mask_suffix
         self.segmentation_suffix = args.segmentation_suffix
         self.segmentation_suffix_noimg = args.segmentation_suffix_noimg
-        #the fusion mode
+        # the fusion mode
         self.fusion_mode = args.fusion_mode
-        #the classes sam performs better
+        # the classes sam performs better
         self.sam_classes = args.sam_classes
-        #the shrink num of segmentation mask
+        # the shrink num of segmentation mask
         self.shrink_num = args.shrink_num
-        
-        self.image_names = os.listdir(self.mask_folder) #one folder corresponds to one image name without suffix
+
+        # one folder corresponds to one image name without suffix
+        self.image_names = os.listdir(self.mask_folder)
         self.image_names.sort()
-        
-        #make the folder to save the fusion result
+
+        # make the folder to save the fusion result
         self.check_and_make(os.path.join(self.output_folder, 'trainID')) #the fusion result in trainID
         # self.check_and_make(os.path.join(self.output_folder, 'color')) #the fusion result in color
         self.check_and_make(os.path.join(self.output_folder, 'mixed')) #the fusion result in color mixed with original image
@@ -274,56 +278,59 @@ class Fusion():
         #     return color_mask
         # else: #one number
         #     label_object = trainid2label[trainid]
-        #     return label_object.color   
+        #     return label_object.color
+
 
 class Fusion2():
     def __init__(self, mask_folder, segmentation_folder, image_folder, gt_folder, mix_ratio,
-                 resize_ratio, output_folder, mask_suffix, segmentation_suffix, segmentation_suffix_noimg,
-                 gt_suffix, fusion_mode, sam_classes, shrink_num, display_size=(200,400)):
-        #the path to the sam mask
+                 resize_ratio, output_folder, mask_suffix, segmentation_suffix,
+                 segmentation_suffix_noimg, gt_suffix, fusion_mode, sam_classes,
+                 shrink_num, display_size=(200, 400)):
+        # the path to the sam mask
         self.mask_folder = mask_folder
-        #the path to the uda prediction
+        # the path to the uda prediction
         self.segmentation_folder = segmentation_folder
-        #the path to the ground truth folder
+        # the path to the ground truth folder
         self.gt_folder = gt_folder
         self.gt_color_folder = self.gt_folder.replace('train_all', 'train_gt_color')
-        #the path to the original image
+        # the path to the original image
         self.image_folder = image_folder
-        #the mix ratio of the fusion result and origianl image
+        # the mix ratio of the fusion result and original image
         self.mix_ratio = mix_ratio
-        #the resize ratio of the mix image
+        # the resize ratio of the mix image
         self.resize_ratio = resize_ratio
-        #the path to the output folder
+        # the path to the output folder
         self.output_folder = output_folder
-        #the image suffix of the mask and segmentation result
+        # the image suffix of the mask and segmentation result
         self.mask_suffix = mask_suffix
         self.segmentation_suffix = segmentation_suffix
         self.segmentation_suffix_noimg = segmentation_suffix_noimg
-        #the gt suffix
+        # the gt suffix
         self.gt_suffix = gt_suffix
-        #the fusion mode
+        # the fusion mode
         self.fusion_mode = fusion_mode
-        #the classes sam performs better
+        # the classes sam performs better
         self.sam_classes = sam_classes
-        #the shrink num of segmentation mask
+        # the shrink num of segmentation mask
         self.shrink_num = shrink_num
-        #the size of the image
-        self.display_size=display_size
+        # the size of the image
+        self.display_size = display_size
         self.label_names = [trainid2label[train_id].name for train_id in range(19)]
         
         self.image_names = os.listdir(self.mask_folder) #one folder corresponds to one image name without suffix
         self.image_names.sort()
         
-        #make the folder to save the fusion result
+        # make the folder to save the fusion result
         self.check_and_make(os.path.join(self.output_folder, 'trainID')) #the fusion result in trainID
         # self.check_and_make(os.path.join(self.output_folder, 'color')) #the fusion result in color
         self.check_and_make(os.path.join(self.output_folder, 'mixed')) #the fusion result in color mixed with original image
-        #make the folder to save the fusion result with segmenation result as the background
+        # make the folder to save the fusion result with segmenation result as the background
         self.check_and_make(os.path.join(self.output_folder, 'trainID_bg')) #the fusion result in trainID with segmenation result as the background
         # self.check_and_make(os.path.join(self.output_folder, 'color_bg')) #the fusion result in color with segmenation result as the background
         self.check_and_make(os.path.join(self.output_folder, 'mixed_bg')) #the fusion result in color mixed with original image with segmenation result as the background
         self.check_and_make(os.path.join(self.output_folder, 'horizontal'))
         self.check_and_make(os.path.join(self.output_folder, 'ious'))
+        
     def check_and_make(self, path):
         if not os.path.exists(path):
             os.makedirs(path)
@@ -370,21 +377,35 @@ class Fusion2():
             # print('counts', counts[:3])
             # get the most frequent trainid
             most_freq_id = num_ids[0]
-            if len(counts) >= 2:
-                if num_ids[0] == 2 and num_ids[1] == 5 and counts[1] / counts[0] >= 0.2:
-                    # if the building is the first class and the pole is the second class, 
-                    # and the ratio of pole to building is larger than 0.25
-                    # then assign the mask with pole
-                    most_freq_id = num_ids[1]
-                elif num_ids[0] == 2 and num_ids[1] == 7 and counts[1] / counts[0] >= 0.1:
-                    # if the building is the first class and the vegetation is the second class,
-                    most_freq_id = num_ids[1]
-                elif num_ids[0] == 7 and num_ids[1] == 8 and counts[1] / counts[0] >= 0.05:
-                    # if the vegetation is the first class and the terrain is the second class,
-                    most_freq_id = num_ids[1]
+            
+            # if len(counts) >= 2:
+            #     pass
+            #     if num_ids[0] == 2 and num_ids[1] == 5 and counts[1] / counts[0] >= 0.2:
+            #         # [building, pole]
+            #         # if the building is the first class and the pole is the second class, 
+            #         # and the ratio of pole to building is larger than 0.25
+            #         # then assign the mask with pole
+            #         most_freq_id = num_ids[1]
+            #     elif num_ids[0] == 2 and num_ids[1] == 7 and counts[1] / counts[0] >= 0.1:
+            #         # [building, traffic sign]
+            #         # if the building is the first class and the traffic sign is the second class,
+            #         mask_shape = Mask_Shape(mask)
+            #         if mask_shape.is_approx_rectangular() or mask_shape.is_approx_triangular():
+            #             # if the mask is rectangular or triangular, 
+            #             # then assign the mask with traffic sign
+            #             most_freq_id = num_ids[1]
+            #         # most_freq_id = num_ids[1]
+            #     elif num_ids[0] == 8 and num_ids[1] == 9 and counts[1] / counts[0] >= 0.05:
+            #         # [traffic sign, vegetation]
+            #         # if the vegetation is the first class and the terrain is the second class,
+            #         most_freq_id = num_ids[1]
+            #     elif num_ids[0] == 3 and num_ids[1] == 4 and counts[1] / counts[0] >= 0.25:
+            #         # [wall, fence]
+            #         most_freq_id = num_ids[1]
+            
             # fill the sam mask using the most frequent trainid in segmentation
             sam_mask[mask[:, :, 0] == 255] = most_freq_id
-        
+            # print('mask_name {}, most_freq_id{}'.format(mask_name, most_freq_id))
         return sam_mask
         
     def color_segmentation(self, segmentation):
@@ -503,29 +524,46 @@ class Fusion2():
         sam_pred: [h, w]
         '''
         fusion_trainid_0, fusion_color_0 = self.fusion_mode_0(segmentation, sam_pred)
-        #fusion_trainid_0: [h, w], fusion_color_0: [h, w, 3]
-        # 预测结果为road但是sam中和road对应的类别为sidewalk(分割成了同一个mask)，将预测结果改为road
-        mask_road = ((segmentation[:, :, 0] == 0) & (fusion_trainid_0 == 1))
-        # 预测结果为siwa但是sam中和siwa对应的类别为road(分割成了同一个mask)，将预测结果改为siwa
-        mask_siwa = ((segmentation[:, :, 0] == 1) & (fusion_trainid_0 == 0))
-        # 预测结果为fence但是sam中和fence对应的类别为wall(分割成了同一个mask)，将预测结果改为fence
-        mask_fenc = ((segmentation[:, :, 0] == 4) & (fusion_trainid_0 == 3))\
-        # 预测结果为pole但是sam中和pole对应的类别为sign/light(分割成了同一个mask)，将预测结果改为pole
-        mask_pole = ((segmentation[:, :, 0] == 5) & (fusion_trainid_0 == 7))\
-                    | ((segmentation[:, :, 0] == 5) & (fusion_trainid_0 == 6))
-        # 预测结果为ligh但是sam中和ligh对应的类别为building/vegetation/pole(分割成了同一个mask)，将预测结果改为ligh
+        # fusion_trainid_0: [h, w], fusion_color_0: [h, w, 3]
+        # # 预测结果为road但是sam中和road对应的类别为sidewalk(分割成了同一个mask)，将预测结果改为road
+        # mask_road = ((segmentation[:, :, 0] == 0) & (fusion_trainid_0 == 1))
+        # 预测结果为siwalk但是sam中和siwalk对应的类别为road(分割成了同一个mask)，将预测结果改为siwalk
+        mask_siwa = ((segmentation[:, :, 0] == 1) & (fusion_trainid_0 == 0))\
+                    | ((segmentation[:, :, 0] == 1) & (fusion_trainid_0 == 0))
+        # 预测结果为fence但是sam中和fence对应的类别为building(分割成了同一个mask)，将预测结果改为fence
+        mask_fenc = ((segmentation[:, :, 0] == 4) & (fusion_trainid_0 == 2))
+        # 预测结果为pole但是sam中和pole对应的类别为building/light/sign(分割成了同一个mask)，将预测结果改为pole
+        mask_pole = ((segmentation[:, :, 0] == 5) & (fusion_trainid_0 == 2))\
+                    | ((segmentation[:, :, 0] == 5) & (fusion_trainid_0 == 6))\
+                    | ((segmentation[:, :, 0] == 5) & (fusion_trainid_0 == 7))
+        # 预测结果为ligh但是sam中和ligh对应的类别为building/pole/vegetation(分割成了同一个mask)，将预测结果改为ligh
         mask_ligh = ((segmentation[:, :, 0] == 6) & (fusion_trainid_0 == 2)) \
-                    | ((segmentation[:, :, 0] == 6) & (fusion_trainid_0 == 8)) \
-                    | ((segmentation[:, :, 0] == 6) & (fusion_trainid_0 == 5))
-        # 预测结果为sign但是sam中和sign对应的类别为building(分割成了同一个mask)，将预测结果改为sign
+                    | ((segmentation[:, :, 0] == 6) & (fusion_trainid_0 == 5)) \
+                    | ((segmentation[:, :, 0] == 6) & (fusion_trainid_0 == 8))
+        # 预测结果为sign但是sam中和sign对应的类别为building/vegetation(分割成了同一个mask)，将预测结果改为sign
         mask_sign = ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 2))\
                     | ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 8))
-        fusion_trainid_0[mask_road] = 0
+        mask_sign_2 = ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 5))  # [H, W]'
+        if np.max(mask_sign_2):  # 如果mask_sign_2中有值
+            # 注意要先试用np.newaxis将mask_sign_2的维度扩展为3维，
+            # 再使用np.repeat将mask_sign_2的前两维在第三维复制3份
+            mask_sign_2_img = np.repeat(mask_sign_2.astype(np.uint8)[:, :, np.newaxis], 3, axis=2)  # [h, w]->[3*h, w]
+            # print('mask_sign_2.shape: ', mask_sign_2.shape, np.max(mask_sign_2), np.min(mask_sign_2))
+            # mask_sign_2 = mask_sign_2.astype(np.uint8).repeat(3, axis=2)  # [h, w]->[h, w, 3]
+            mask_shape_sign = Mask_Shape(mask_sign_2_img)
+            if mask_shape_sign.is_approx_circle:
+                mask_sign = mask_sign | mask_sign_2
+
+        # 预测结果为person但是sam中和person对应的类别为building(分割成了同一个mask)，将预测结果改为person
+        mask_person = ((segmentation[:, :, 0] == 11) & (fusion_trainid_0 == 2))\
+            
+        # fusion_trainid_0[mask_road] = 0
         fusion_trainid_0[mask_siwa] = 1
         fusion_trainid_0[mask_fenc] = 4
         fusion_trainid_0[mask_pole] = 5
         fusion_trainid_0[mask_ligh] = 6
         fusion_trainid_0[mask_sign] = 7
+        fusion_trainid_0[mask_person] = 11
         fusion_color_0 = self.color_segmentation(fusion_trainid_0)
         return fusion_trainid_0, fusion_color_0
         
@@ -593,8 +631,9 @@ class Fusion2():
         total_width = sum(image.shape[1] for image in images)
         row = 2
         col = (len(images) + 1) // 2
+        gap = 10  # the gap between two images horizontally
         new_height = self.display_size[0] * row
-        new_total_width = self.display_size[1] * col
+        new_total_width = (self.display_size[1] + gap) * col
         
         #显示的文本列表
         texts = ['Image', 'Ground Truth', 'SAM', 'Segmentation']
@@ -620,7 +659,7 @@ class Fusion2():
             else:
                 output_image[image.shape[0]:, current_width:current_width+image.shape[1], :] = image
             # output_image[0:image.shape[0], current_width:current_width+image.shape[1], :] = image
-            current_width += image.shape[1]
+            current_width += (image.shape[1] + gap)
             current_width = current_width % new_total_width
         
         # 显示结果图像
@@ -646,7 +685,7 @@ class Fusion2():
         #save the miou and class ious
         data.to_csv(os.path.join(self.output_folder, 'ious', image_name + '.csv'), index=False)
         
-    
+
 def main():
     args = get_parse()
     fusion = Fusion(args)
