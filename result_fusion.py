@@ -77,30 +77,36 @@ class Fusion():
         self.image_names.sort()
 
         # make the folder to save the fusion result
-        self.check_and_make(os.path.join(self.output_folder, 'trainID')) #the fusion result in trainID
-        # self.check_and_make(os.path.join(self.output_folder, 'color')) #the fusion result in color
-        self.check_and_make(os.path.join(self.output_folder, 'mixed')) #the fusion result in color mixed with original image
-        #make the folder to save the fusion result with segmenation result as the background
-        self.check_and_make(os.path.join(self.output_folder, 'trainID_bg')) #the fusion result in trainID with segmenation result as the background
-        # self.check_and_make(os.path.join(self.output_folder, 'color_bg')) #the fusion result in color with segmenation result as the background
-        self.check_and_make(os.path.join(self.output_folder, 'mixed_bg')) #the fusion result in color mixed with original image with segmenation result as the background
-        
+        # the fusion result in trainID
+        self.check_and_make(os.path.join(self.output_folder, 'trainID'))
+        # the fusion result in color
+        # self.check_and_make(os.path.join(self.output_folder, 'color'))
+        # the fusion result in color mixed with original image
+        self.check_and_make(os.path.join(self.output_folder, 'mixed'))
+        # make the folder to save the fusion result with segmentation result as the background
+        # the fusion result in trainID with segmentation result as the background
+        self.check_and_make(os.path.join(self.output_folder, 'trainID_bg'))
+        # the fusion result in color with segmentation result as the background
+        # self.check_and_make(os.path.join(self.output_folder, 'color_bg'))
+        # the fusion result in color mixed with original image with segmentation as background
+        self.check_and_make(os.path.join(self.output_folder, 'mixed_bg'))
+
     def check_and_make(self, path):
         if not os.path.exists(path):
             os.makedirs(path)
         else:
             print('the path is already exist')
-    
+
     def get_sam_pred(self, image_name, segmentation):
         '''
         use the mask from sam and the prediction from uda
-        output the trainid and color mask
+        output the train id and color mask
         to do: add the confidence threshold of segmentation result
         '''
         # get the mask names
         mask_names = [name for name in os.listdir(os.path.join(self.mask_folder, image_name)) if self.mask_suffix in name]
 
-        # sort the mask names accrording to the mask area from large to small
+        # sort the mask names according to the mask area from large to small
         # mask_areas = []
         # for mask_name in mask_names:
         #     mask_path = os.path.join(self.mask_folder, image_name, mask_name)
@@ -256,7 +262,7 @@ class Fusion():
         input: trainid
         output: color
         '''
-        #if the input is a number in np.uint8, it means it is a trainid
+        # if the input is a number in np.uint8, it means it is a trainid
         if type(trainid) == np.uint8:
             label_object = trainid2label[trainid]
             return label_object.color[::-1]
@@ -283,7 +289,8 @@ class Fusion():
 
 
 class Fusion2():
-    def __init__(self, mask_folder, segmentation_folder, image_folder, gt_folder, mix_ratio,
+    def __init__(self, mask_folder, segmentation_folder, confidence_folder, entropy_folder,
+                 image_folder, gt_folder, mix_ratio,
                  resize_ratio, output_folder, mask_suffix, segmentation_suffix,
                  segmentation_suffix_noimg, gt_suffix, fusion_mode, sam_classes,
                  shrink_num, display_size=(200, 400)):
@@ -291,6 +298,10 @@ class Fusion2():
         self.mask_folder = mask_folder
         # the path to the uda prediction
         self.segmentation_folder = segmentation_folder
+        # the path to the confidence map
+        self.confidence_folder = confidence_folder
+        # the path to the entropy map
+        self.entropy_folder = entropy_folder
         # the path to the ground truth folder
         self.gt_folder = gt_folder
         self.gt_color_folder = self.gt_folder.replace('train_all', 'train_gt_color')
@@ -317,27 +328,34 @@ class Fusion2():
         # the size of the image
         self.display_size = display_size
         self.label_names = [trainid2label[train_id].name for train_id in range(19)]
-        
-        self.image_names = os.listdir(self.mask_folder) #one folder corresponds to one image name without suffix
+        # one folder corresponds to one image name without suffix
+        self.image_names = os.listdir(self.mask_folder)
         self.image_names.sort()
-        
+
         # make the folder to save the fusion result
-        self.check_and_make(os.path.join(self.output_folder, 'trainID')) #the fusion result in trainID
-        # self.check_and_make(os.path.join(self.output_folder, 'color')) #the fusion result in color
-        self.check_and_make(os.path.join(self.output_folder, 'mixed')) #the fusion result in color mixed with original image
-        # make the folder to save the fusion result with segmenation result as the background
-        self.check_and_make(os.path.join(self.output_folder, 'trainID_bg')) #the fusion result in trainID with segmenation result as the background
-        # self.check_and_make(os.path.join(self.output_folder, 'color_bg')) #the fusion result in color with segmenation result as the background
-        self.check_and_make(os.path.join(self.output_folder, 'mixed_bg')) #the fusion result in color mixed with original image with segmenation result as the background
+        # the fusion result in trainID
+        self.check_and_make(os.path.join(self.output_folder, 'trainID'))
+        # the fusion result in color
+        # self.check_and_make(os.path.join(self.output_folder, 'color'))
+        # the fusion result in color mixed with original image
+        self.check_and_make(os.path.join(self.output_folder, 'mixed'))
+        # make the folder to save the fusion result with segmentation result as the background
+        # the fusion result in trainID with segmentation result as the background
+        self.check_and_make(os.path.join(self.output_folder, 'trainID_bg'))
+        # self.check_and_make(os.path.join(self.output_folder, 'color_bg'))
+        # the fusion result in color with segmentation result as the background
+        # the fusion result in color mixed with original image with segmentation 
+        # result as the background
         self.check_and_make(os.path.join(self.output_folder, 'horizontal'))
+        self.check_and_make(os.path.join(self.output_folder, 'mixed_bg'))
         self.check_and_make(os.path.join(self.output_folder, 'ious'))
-        
+
     def check_and_make(self, path):
         if not os.path.exists(path):
             os.makedirs(path)
         else:
             print('the path is already exist')
-    
+
     def get_sam_pred(self, image_name, segmentation):
         '''
         use the mask from sam and the prediction from uda
@@ -368,7 +386,7 @@ class Fusion2():
             # get the number of trainids in the segmentation result using the mask with value 255
             trainids = segmentation[:, :, 0][mask[:, :, 0] == 255]
             num_ids, counts = np.unique(trainids, return_counts=True)
-            #sort the num_ids according to the counts
+            # sort the num_ids according to the counts
             num_ids = [num_id for _, num_id in sorted(zip(counts, num_ids), reverse=True)]
             counts = sorted(counts, reverse=True)
             # print the top 3 classes
@@ -380,7 +398,7 @@ class Fusion2():
             most_freq_id = num_ids[0]
             
             if len(counts) >= 2:
-                if num_ids[0] == 2 and num_ids[1] == 5 and counts[1] / counts[0] >= 0.2:
+                if num_ids[0] == 2 and num_ids[1] == 5 and counts[1] / counts[0] >= 0.1:
                     # [building, pole]
                     # if the building is the first class and the pole is the second class, 
                     # and the ratio of pole to building is larger than 0.25
@@ -575,6 +593,7 @@ class Fusion2():
         return fusion_trainid, fusion_color
     
     def fusion_mode_5(self, segmentation, sam_pred):
+        #not so good
         fusion_trainid, fusion_color = self.fusion_mode_0(segmentation=segmentation, sam_pred=sam_pred)
         unique_classes = np.unique(fusion_trainid)
         unique_classes = unique_classes[unique_classes != 255]
@@ -622,7 +641,7 @@ class Fusion2():
         #     label_object = trainid2label[trainid]
         #     return label_object.color   
 
-    def display_images_horizontally(self, images, image_name, miou):
+    def display_images_horizontally(self, images, image_name, mious):
         '''
         function:
             display the images horizontally and save the result
@@ -632,7 +651,7 @@ class Fusion2():
                     fusion_1_result, fusion_2_result, fusion_3_result, fusion_4_result,
                     error_1, error_2, error_3, error_4]
             images_name: the name of the image
-            miou: a list of miou and ious,
+            mious: a list of miou and ious,
                     (miou_1, ious_1), (miou_2, ious_2),(miou_3, ious_3), (miou_4, ious_4)
         '''
         # 获取最大高度和总宽度
@@ -646,13 +665,13 @@ class Fusion2():
         
         #显示的文本列表
         texts = ['Image', 'Ground Truth', 'SAM', 'Segmentation']
-        for i, (miou, ious) in enumerate(miou):
+        for i, (miou, ious) in enumerate(mious):
             #cal the non-zero classes in ious
             unique_classes = np.sum(np.array(ious) != 0)
             mIOU2 = np.sum(np.array(ious)) / unique_classes
             texts.append('f_{}, mIoU19: {:.2f} mIoU{}: {:.2f}'.format(i+1, miou * 100, \
                 unique_classes, mIOU2 * 100))
-        for i in range(len(miou)):
+        for i in range(len(mious)):
             texts.append('Error image f_{}'.format(i+1))
 
         # 创建一个新的空白画布
@@ -699,9 +718,9 @@ class Fusion2():
             'Differ_4_1': [miou_diff_4_1] + iou_diff_4_1,
         })
 
-        #save the miou and class ious
+        # save the miou and class ious
         data.to_csv(os.path.join(self.output_folder, 'ious', image_name + '.csv'), index=False)
-    
+
     def get_error_image(self, predicted, ground_truth, pred_color):
         '''
         function: get the error image
@@ -721,10 +740,12 @@ class Fusion2():
         # error_mask[pred != gt] = 255
         return pred_color_copy
 
+
 def main():
     args = get_parse()
     fusion = Fusion(args)
     fusion.fusion()
+
 
 if __name__ == '__main__':
     main()
