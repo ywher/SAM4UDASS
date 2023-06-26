@@ -597,7 +597,7 @@ class Fusion2():
         date:   2023-6-26
         function: 
             based on fusion_mode_3, 
-            use confidence_mask to add model segmentation to the fusion result
+            use confidence_mask to select model segmentation to the fusion result
         input: 
             segmentation:   [h, w, 3],  uint8, from class 0 to 18
             sam_pred:       [h, w],     uint8, from class 0 to 18
@@ -606,14 +606,36 @@ class Fusion2():
             fusion_trainid: [h, w],     uint8, from class 0 to 18
             fusion_color:   [h, w, 3],  uint8,
         '''
-        fusion_trainid, fusion_color = self.fusion_mode_3(segmentation=segmentation, sam_pred=sam_pred)
+        fusion_trainid, _ = self.fusion_mode_3(segmentation=segmentation, sam_pred=sam_pred)
+        fusion_trainid[confidence_mask] = segmentation[:, :, 0][confidence_mask]
+        fusion_color = self.color_segmentation(fusion_trainid)
         
+        return fusion_trainid, fusion_color
+    
+    def fusion_mode_5(self, segmentation, sam_pred, entropy_mask):
+        '''
+        author: weihao_yan
+        date:   2023-6-26
+        function: 
+            based on fusion_mode_3, 
+            use entropy_mask to select model segmentation to the fusion result
+        input: 
+            segmentation:   [h, w, 3],  uint8, from class 0 to 18
+            sam_pred:       [h, w],     uint8, from class 0 to 18
+            entropy_mask:   [h, w],     bool,
+        output:
+            fusion_trainid: [h, w],     uint8, from class 0 to 18
+            fusion_color:   [h, w, 3],  uint8,
+        '''
+        fusion_trainid, _ = self.fusion_mode_3(segmentation=segmentation, sam_pred=sam_pred)
+        fusion_trainid[entropy_mask] = segmentation[:, :, 0][entropy_mask]
+        fusion_color = self.color_segmentation(fusion_trainid)
         
         return fusion_trainid, fusion_color
 
-    def fusion_mode_5(self, segmentation, sam_pred):
+    def fusion_mode_6(self, segmentation, sam_pred):
         #not so good
-        fusion_trainid, fusion_color = self.fusion_mode_0(segmentation=segmentation, sam_pred=sam_pred)
+        fusion_trainid, fusion_color = self.fusion_mode_1(segmentation=segmentation, sam_pred=sam_pred)
         unique_classes = np.unique(fusion_trainid)
         unique_classes = unique_classes[unique_classes != 255]
         
@@ -744,7 +766,11 @@ class Fusion2():
             # cal the non-zero classes in ious
             unique_classes = np.sum(np.array(ious) != 0)
             mIOU2 = np.sum(np.array(ious)) / unique_classes
-            texts.append('f_{}, mIoU19: {:.2f} mIoU{}: {:.2f}'.format(i + 1, miou * 100,
+            if i > 0:
+                texts.append('f_{}, mIoU19: {:.2f} mIoU{}: {:.2f}'.format(i + 2, miou * 100,
+                                        unique_classes, mIOU2 * 100))
+            else:
+                texts.append('f_{}, mIoU19: {:.2f} mIoU{}: {:.2f}'.format(i + 1, miou * 100,
                                         unique_classes, mIOU2 * 100))
         for i in range(len(mious)):
             texts.append('Error image f_{}'.format(i + 1))
