@@ -17,7 +17,9 @@ from utils.shrink_mask import shrink_region
 # from matplotlib import pyplot as plt
 import pandas as pd
 import copy
+import matplotlib.pyplot as plt
 from utils.mask_shape import Mask_Shape
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 def get_parse():
@@ -291,8 +293,10 @@ class Fusion():
 class Fusion2():
     def __init__(self, mask_folder, segmentation_folder, confidence_folder, entropy_folder,
                  image_folder, gt_folder, mix_ratio,
-                 resize_ratio, output_folder, mask_suffix, segmentation_suffix,
-                 segmentation_suffix_noimg, gt_suffix, fusion_mode, sam_classes,
+                 resize_ratio, output_folder, mask_suffix,
+                 segmentation_suffix, segmentation_suffix_noimg,
+                 confidence_suffix, entropy_suffix,
+                 gt_suffix, fusion_mode, sam_classes,
                  shrink_num, display_size=(200, 400)):
         # the path to the sam mask
         self.mask_folder = mask_folder
@@ -300,8 +304,10 @@ class Fusion2():
         self.segmentation_folder = segmentation_folder
         # the path to the confidence map
         self.confidence_folder = confidence_folder
+        self.confidence_suffix = confidence_suffix
         # the path to the entropy map
         self.entropy_folder = entropy_folder
+        self.entropy_suffix = entropy_suffix
         # the path to the ground truth folder
         self.gt_folder = gt_folder
         self.gt_color_folder = self.gt_folder.replace('train_all', 'train_gt_color')
@@ -499,7 +505,7 @@ class Fusion2():
             # fusion = cv2.cvtColor(fusion, cv2.COLOR_GRAY2BGR)
             # fusion = cv2.addWeighted(image, 0.5, fusion, 0.5, 0)
             # cv2.imwrite(os.path.join(self.output_folder, image_name + self.mask_suffix), fusion)
-    
+
     def fusion_mode_1(self, segmentation, sam_pred):
         #initialize the fusion mask in trainid, fusion mask in color
         fusion_trainid = np.ones_like(segmentation[:, :, 0], dtype=np.uint8) * 255
@@ -519,7 +525,7 @@ class Fusion2():
         fusion_color_bg = fusion_color_bg.astype(np.uint8)
         
         return fusion_trainid_bg, fusion_color_bg
-    
+
     def fusion_mode_2(self, segmentation, sam_pred):
         #initialize the fusion mask in trainid, fusion mask in color
         fusion_trainid = np.ones_like(segmentation[:, :, 0], dtype=np.uint8) * 255
@@ -535,7 +541,7 @@ class Fusion2():
         fusion_color = self.color_segmentation(fusion_trainid)
         
         return fusion_trainid, fusion_color
-    
+
     def fusion_mode_3(self, segmentation, sam_pred):
         '''
         segmentation: [h, w, 3]
@@ -584,14 +590,27 @@ class Fusion2():
         fusion_trainid_0[mask_person] = 11
         fusion_color_0 = self.color_segmentation(fusion_trainid_0)
         return fusion_trainid_0, fusion_color_0
+
+    def fusion_mode_4(self, segmentation, sam_pred, confidence_mask):
+        '''
+        author: weihao_yan
+        date:   2023-6-26
+        function: 
+            based on fusion_mode_3, 
+            use confidence_mask to add model segmentation to the fusion result
+        input: 
+            segmentation:   [h, w, 3],  uint8, from class 0 to 18
+            sam_pred:       [h, w],     uint8, from class 0 to 18
+            confidence_mask:[h, w],     bool,
+        output:
+            fusion_trainid: [h, w],     uint8, from class 0 to 18
+            fusion_color:   [h, w, 3],  uint8,
+        '''
+        fusion_trainid, fusion_color = self.fusion_mode_3(segmentation=segmentation, sam_pred=sam_pred)
         
-    def fusion_mode_4(self, segmentation, sam_pred):
-        '''
-        based on fusion mode 0
-        '''
-        fusion_trainid, fusion_color = self.fusion_mode_2(segmentation=segmentation, sam_pred=sam_pred)
+        
         return fusion_trainid, fusion_color
-    
+
     def fusion_mode_5(self, segmentation, sam_pred):
         #not so good
         fusion_trainid, fusion_color = self.fusion_mode_0(segmentation=segmentation, sam_pred=sam_pred)
@@ -609,7 +628,7 @@ class Fusion2():
         
         fusion_color = self.color_segmentation(fusion_trainid)
         return fusion_trainid, fusion_color
-    
+
     def trainid2color(self, trainid):
         '''
         function: convert trainID to color in cityscapes
@@ -641,7 +660,60 @@ class Fusion2():
         #     label_object = trainid2label[trainid]
         #     return label_object.color   
 
-    def display_images_horizontally(self, images, image_name, mious):
+    def visualize_numpy(self, np_array):
+        # 创建子图和画布
+        fig, axis = plt.subplots(figsize=(8, 4))
+        # fig, (ax1, ax2) = plt.subplots(1, 1, figsize=(8, 4))
+
+        # 可视化预测置信度数组
+        im1 = axis.imshow(np_array, cmap='viridis')
+        # ax1.set_title('Confidence')
+        axis.set_xlabel('Width')
+        axis.set_ylabel('Height')
+        axis.axis('off')
+        # fig.colorbar(im1, ax=ax1)
+        divider1 = make_axes_locatable(axis)
+        cax1 = divider1.append_axes('right', size='5%', pad=0.05)
+        fig.colorbar(im1, cax=cax1)
+        # return the figure in numpy format
+        # 将图像转换为NumPy数组
+        fig.canvas.draw()
+        bgr_image = np.array(fig.canvas.renderer._renderer)
+        bgr_image = cv2.cvtColor(bgr_image, cv2.COLOR_RGB2BGR)
+        
+        # 裁剪图像，去除边界
+        gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
+        _, thresh = cv2.threshold(gray_image, 1, 255, cv2.THRESH_BINARY)
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        x, y, w, h = cv2.boundingRect(contours[0])
+        bgr_image = bgr_image[y:y+h, x:x+w]
+        return bgr_image
+
+    def visualize_numpy_higher_threshold(self, np_array, image, threshold=0.0):
+        '''
+        function:
+            mark the area on the image with np_array > threshold
+        input:
+        output: high_mask, image
+        '''
+        image = image.copy()
+        high_mask = np_array > threshold
+        image[high_mask] = [0, 255, 0]  # BGR
+        return high_mask, image
+
+    def visualize_numpy_lower_threshold(self, np_array, image, threshold=0.0):
+        '''
+        function:
+            mark the area on the image with np_array < threshold
+        input:
+        output: low_mask, image
+        '''
+        image = image.copy()
+        low_mask = np_array < threshold
+        image[low_mask] = [0, 255, 0]  # BGR
+        return low_mask, image
+
+    def display_images_horizontally(self, images, image_name, mious, thresholds):
         '''
         function:
             display the images horizontally and save the result
@@ -649,30 +721,37 @@ class Fusion2():
             images: a list of images, 3 * 4 = 12 images
                     [image, ground truth, sam seg, model seg,
                     fusion_1_result, fusion_2_result, fusion_3_result, fusion_4_result,
-                    error_1, error_2, error_3, error_4]
+                    error_1, error_2, error_3, error_4,
+                    confidence_map, entropy_map]
             images_name: the name of the image
             mious: a list of miou and ious,
                     (miou_1, ious_1), (miou_2, ious_2),(miou_3, ious_3), (miou_4, ious_4)
+            thresholds: a list of thresholds
+                    [confidence_threshold, entropy_threshold]
         '''
         # 获取最大高度和总宽度
-        max_height = max(image.shape[0] for image in images)
-        total_width = sum(image.shape[1] for image in images)
-        row = 3
-        col = (len(images) + 1) // row
+        # max_height = max(image.shape[0] for image in images)
+        # total_width = sum(image.shape[1] for image in images)
+        col = 4
+        row = len(images) // col + 1 if len(images) % col != 0 else len(images) // col
         gap = 10  # the gap between two images horizontally
         new_height = self.display_size[0] * row
         new_total_width = (self.display_size[1] + gap) * col
         
-        #显示的文本列表
+        # 显示的文本列表
         texts = ['Image', 'Ground Truth', 'SAM', 'Segmentation']
         for i, (miou, ious) in enumerate(mious):
-            #cal the non-zero classes in ious
+            # cal the non-zero classes in ious
             unique_classes = np.sum(np.array(ious) != 0)
             mIOU2 = np.sum(np.array(ious)) / unique_classes
-            texts.append('f_{}, mIoU19: {:.2f} mIoU{}: {:.2f}'.format(i+1, miou * 100, \
-                unique_classes, mIOU2 * 100))
+            texts.append('f_{}, mIoU19: {:.2f} mIoU{}: {:.2f}'.format(i + 1, miou * 100,
+                                        unique_classes, mIOU2 * 100))
         for i in range(len(mious)):
-            texts.append('Error image f_{}'.format(i+1))
+            texts.append('Error image f_{}'.format(i + 1))
+        texts.append('Confidence')
+        texts.append('Entropy')
+        texts.append('Confidence {}'.format(thresholds[0]))
+        texts.append('Entropy {:.2f}'.format(thresholds[1]))
 
         # 创建一个新的空白画布
         output_image = np.zeros((new_height, new_total_width, 3), dtype=np.uint8)
@@ -681,16 +760,21 @@ class Fusion2():
         current_width = 0
         for i, image in enumerate(images):
             image = cv2.resize(image, (self.display_size[1], self.display_size[0]), \
-                interpolation=cv2.INTER_LINEAR)
+                    interpolation=cv2.INTER_LINEAR)
             image = cv2.putText(image, texts[i], (20, 50), \
                     fontFace=cv2.FONT_HERSHEY_COMPLEX, fontScale= 1, color=(0, 0, 255), thickness=2)
+            # first row
             if i < col:
-                output_image[0:image.shape[0], current_width:current_width+image.shape[1], :] = image
+                output_image[0*image.shape[0]:1*image.shape[0], current_width:current_width+image.shape[1], :] = image
+            # second row
             elif col <= i < 2 * col:
-                output_image[image.shape[0]:2*image.shape[0], current_width:current_width+image.shape[1], :] = image
+                output_image[1*image.shape[0]:2*image.shape[0], current_width:current_width+image.shape[1], :] = image
+            # third row
+            elif col * 2 <= i < 3 * col:
+                output_image[2*image.shape[0]:3*image.shape[0], current_width:current_width+image.shape[1], :] = image
+            # fourth row
             else:
-                output_image[2*image.shape[0]:, current_width:current_width+image.shape[1], :] = image
-            # output_image[0:image.shape[0], current_width:current_width+image.shape[1], :] = image
+                output_image[3*image.shape[0]:4*image.shape[0], current_width:current_width+image.shape[1], :] = image
             current_width += (image.shape[1] + gap)
             current_width = current_width % new_total_width
         
