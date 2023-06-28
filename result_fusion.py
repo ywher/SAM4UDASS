@@ -362,7 +362,7 @@ class Fusion2():
         else:
             print('the path is already exist')
 
-    def get_sam_pred(self, image_name, segmentation):
+    def get_sam_pred(self, image_name, segmentation, entropy_mask):
         '''
         use the mask from sam and the prediction from uda
         output the trainid and color mask
@@ -390,8 +390,8 @@ class Fusion2():
             # cv2.waitKey(100)
             # cv2.destroyAllWindows()
             # get the number of trainids in the segmentation result using the mask with value 255
-            trainids = segmentation[:, :, 0][mask[:, :, 0] == 255]
-            num_ids, counts = np.unique(trainids, return_counts=True)
+            trainids = segmentation[:, :, 0][mask[:, :, 0] == 255]  # [N,]
+            num_ids, counts = np.unique(trainids, return_counts=True) # [n, ], [n1, n2, n3, ...]
             # sort the num_ids according to the counts
             num_ids = [num_id for _, num_id in sorted(zip(counts, num_ids), reverse=True)]
             counts = sorted(counts, reverse=True)
@@ -426,6 +426,12 @@ class Fusion2():
                 elif num_ids[0] == 3 and num_ids[1] == 4 and counts[1] / counts[0] >= 0.25:
                     # [wall, fence]
                     most_freq_id = num_ids[1]
+                elif num_ids[0] == 9 and num_ids[1] == 1:
+                    # [terrain, sidewalk]
+                    num_id_0 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[0], mask[:, :, 0] == 255), entropy_mask))
+                    num_id_1 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[1], mask[:, :, 0] == 255), entropy_mask))
+                    if num_id_1 > num_id_0:
+                        most_freq_id = num_ids[1]
             
             # fill the sam mask using the most frequent trainid in segmentation
             sam_mask[mask[:, :, 0] == 255] = most_freq_id
@@ -470,12 +476,14 @@ class Fusion2():
             cv2.imwrite(os.path.join(self.output_folder, 'mixed', image_name + self.mask_suffix), mixed_color)
 
             #get the fusion result with the background
-            if self.fusion_mode == 0:
-                fusion_trainid_bg, fusion_color_bg = self.fusion_mode_0(segmentation=segmentation, sam_pred=sam_pred)
-            elif self.fusion_mode == 1:
+            if self.fusion_mode == 1:
                 fusion_trainid_bg, fusion_color_bg = self.fusion_mode_1(segmentation=segmentation, sam_pred=sam_pred)
+            elif self.fusion_mode == 2:
+                fusion_trainid_bg, fusion_color_bg = self.fusion_mode_2(segmentation=segmentation, sam_pred=sam_pred)
             elif self.fusion_mode == 3:
                 fusion_trainid_bg, fusion_color_bg = self.fusion_mode_3(segmentation=segmentation, sam_pred=sam_pred)
+            # elif self.fusion_mode == 4:
+            #     fusion_trainid_bg, fusion_color_bg = self.fusion_mode_4(segmentation=segmentation, sam_pred=sam_pred)
             else:
                 # raise NotImplementedError
                 raise NotImplementedError("This fusion mode has not been implemented yet.")
@@ -542,12 +550,18 @@ class Fusion2():
         
         return fusion_trainid, fusion_color
 
-    def fusion_mode_3(self, segmentation, sam_pred):
+    def fusion_mode_3(self, segmentation, sam_pred, fusion_trainid_0=None, fusion_color_0=None):
         '''
         segmentation: [h, w, 3]
         sam_pred: [h, w]
         '''
-        fusion_trainid_0, fusion_color_0 = self.fusion_mode_1(segmentation, sam_pred)
+        if fusion_trainid_0 is None or fusion_color_0 is None:
+            fusion_trainid_0, fusion_color_0 = self.fusion_mode_1(segmentation, sam_pred)
+        else:
+            # print('copy in fusion 3')
+            fusion_trainid_0 = copy.deepcopy(fusion_trainid_0)
+            fusion_color_0 = copy.deepcopy(fusion_color_0)
+        fusion_ids = np.unique(fusion_trainid_0)
         # fusion_trainid_0: [h, w], fusion_color_0: [h, w, 3]
         # # 预测结果为road但是sam中和road对应的类别为sidewalk(分割成了同一个mask)，将预测结果改为road
         # mask_road = ((segmentation[:, :, 0] == 0) & (fusion_trainid_0 == 1))
@@ -567,7 +581,8 @@ class Fusion2():
         # 预测结果为sign但是sam中和sign对应的类别为building/vegetation(分割成了同一个mask)，将预测结果改为sign
         mask_sign = ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 2))\
                     | ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 8))
-        mask_sign_2 = ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 5))  # [H, W]'
+        mask_sign_2 = ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 5))  # [H, W]
+        mask_bike = (segmentation[:, :, 0] == 18)
         if np.max(mask_sign_2):  # 如果mask_sign_2中有值
             # 注意要先试用np.newaxis将mask_sign_2的维度扩展为3维，
             # 再使用np.repeat将mask_sign_2的前两维在第三维复制3份
@@ -588,10 +603,13 @@ class Fusion2():
         fusion_trainid_0[mask_ligh] = 6
         fusion_trainid_0[mask_sign] = 7
         fusion_trainid_0[mask_person] = 11
+        # print(fusion_ids)
+        # if 18 not in fusion_ids:
+        fusion_trainid_0[mask_bike] = 18
         fusion_color_0 = self.color_segmentation(fusion_trainid_0)
         return fusion_trainid_0, fusion_color_0
 
-    def fusion_mode_4(self, segmentation, sam_pred, confidence_mask):
+    def fusion_mode_4(self, segmentation, sam_pred, confidence_mask, fusion_trainid=None):
         '''
         author: weihao_yan
         date:   2023-6-26
@@ -606,8 +624,13 @@ class Fusion2():
             fusion_trainid: [h, w],     uint8, from class 0 to 18
             fusion_color:   [h, w, 3],  uint8,
         '''
-        fusion_trainid, _ = self.fusion_mode_3(segmentation=segmentation, sam_pred=sam_pred)
-        fusion_trainid[confidence_mask] = segmentation[:, :, 0][confidence_mask]
+        if fusion_trainid is None:
+            fusion_trainid, _ = self.fusion_mode_3(segmentation=segmentation, sam_pred=sam_pred)
+        else:
+            # print('copy in fusion 4')
+            fusion_trainid = copy.deepcopy(fusion_trainid)
+        road_mask = (segmentation[:, :, 0] == 0) & (fusion_trainid == 1) & confidence_mask
+        fusion_trainid[road_mask] = 0
         fusion_color = self.color_segmentation(fusion_trainid)
         
         return fusion_trainid, fusion_color
@@ -628,7 +651,8 @@ class Fusion2():
             fusion_color:   [h, w, 3],  uint8,
         '''
         fusion_trainid, _ = self.fusion_mode_3(segmentation=segmentation, sam_pred=sam_pred)
-        fusion_trainid[entropy_mask] = segmentation[:, :, 0][entropy_mask]
+        road_mask = (segmentation[:, :, 0] == 0) & (fusion_trainid == 1) & entropy_mask
+        fusion_trainid[road_mask] = 0
         fusion_color = self.color_segmentation(fusion_trainid)
         
         return fusion_trainid, fusion_color
@@ -766,7 +790,7 @@ class Fusion2():
             # cal the non-zero classes in ious
             unique_classes = np.sum(np.array(ious) != 0)
             mIOU2 = np.sum(np.array(ious)) / unique_classes
-            if i > 0:
+            if i == len(mious) - 1:
                 texts.append('f_{}, mIoU19: {:.2f} mIoU{}: {:.2f}'.format(i + 2, miou * 100,
                                         unique_classes, mIOU2 * 100))
             else:

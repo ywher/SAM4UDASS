@@ -47,3 +47,6 @@ _darcs
 **/node_modules
 yarn.lock
 package-lock.json
+
+# config, absolute pathes
+config.py
