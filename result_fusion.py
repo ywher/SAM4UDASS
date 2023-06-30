@@ -291,13 +291,12 @@ class Fusion():
 
 
 class Fusion2():
-    def __init__(self, mask_folder, segmentation_folder, confidence_folder, entropy_folder,
-                 image_folder, gt_folder, mix_ratio,
-                 resize_ratio, output_folder, mask_suffix,
-                 segmentation_suffix, segmentation_suffix_noimg,
-                 confidence_suffix, entropy_suffix,
-                 gt_suffix, fusion_mode, sam_classes,
-                 shrink_num, display_size=(200, 400)):
+    def __init__(self, mask_folder=None, segmentation_folder=None, confidence_folder=None, entropy_folder=None,
+                 image_folder=None, gt_folder=None, num_classes=None,
+                 mix_ratio=None, resize_ratio=None, output_folder=None, mask_suffix=None,
+                 segmentation_suffix=None, segmentation_suffix_noimg=None,
+                 confidence_suffix=None, entropy_suffix=None, gt_suffix=None,
+                 fusion_mode=None, sam_classes=None, shrink_num=None, display_size=(200, 400)):
         # the path to the sam mask
         self.mask_folder = mask_folder
         # the path to the uda prediction
@@ -308,6 +307,8 @@ class Fusion2():
         # the path to the entropy map
         self.entropy_folder = entropy_folder
         self.entropy_suffix = entropy_suffix
+        # the number of classes
+        self.num_classes = num_classes
         # the path to the ground truth folder
         self.gt_folder = gt_folder
         self.gt_color_folder = self.gt_folder.replace('train_all', 'train_gt_color')
@@ -334,27 +335,32 @@ class Fusion2():
         # the size of the image
         self.display_size = display_size
         self.label_names = [trainid2label[train_id].name for train_id in range(19)]
+        if self.num_classes == 16:
+            self.label_names.remove('train')
+            self.label_names.remove('truck')
+            self.label_names.remove('terrain')
         # one folder corresponds to one image name without suffix
         self.image_names = os.listdir(self.mask_folder)
         self.image_names.sort()
 
         # make the folder to save the fusion result
         # the fusion result in trainID
-        self.check_and_make(os.path.join(self.output_folder, 'trainID'))
-        # the fusion result in color
-        # self.check_and_make(os.path.join(self.output_folder, 'color'))
-        # the fusion result in color mixed with original image
-        self.check_and_make(os.path.join(self.output_folder, 'mixed'))
-        # make the folder to save the fusion result with segmentation result as the background
-        # the fusion result in trainID with segmentation result as the background
-        self.check_and_make(os.path.join(self.output_folder, 'trainID_bg'))
-        # self.check_and_make(os.path.join(self.output_folder, 'color_bg'))
-        # the fusion result in color with segmentation result as the background
-        # the fusion result in color mixed with original image with segmentation 
-        # result as the background
-        self.check_and_make(os.path.join(self.output_folder, 'horizontal'))
-        self.check_and_make(os.path.join(self.output_folder, 'mixed_bg'))
-        self.check_and_make(os.path.join(self.output_folder, 'ious'))
+        if self.output_folder is not None:
+            self.check_and_make(os.path.join(self.output_folder, 'trainID'))
+            # the fusion result in color
+            # self.check_and_make(os.path.join(self.output_folder, 'color'))
+            # the fusion result in color mixed with original image
+            self.check_and_make(os.path.join(self.output_folder, 'mixed'))
+            # make the folder to save the fusion result with segmentation result as the background
+            # the fusion result in trainID with segmentation result as the background
+            self.check_and_make(os.path.join(self.output_folder, 'trainID_bg'))
+            # self.check_and_make(os.path.join(self.output_folder, 'color_bg'))
+            # the fusion result in color with segmentation result as the background
+            # the fusion result in color mixed with original image with segmentation 
+            # result as the background
+            self.check_and_make(os.path.join(self.output_folder, 'horizontal'))
+            self.check_and_make(os.path.join(self.output_folder, 'mixed_bg'))
+            self.check_and_make(os.path.join(self.output_folder, 'ious'))
 
     def check_and_make(self, path):
         if not os.path.exists(path):
@@ -432,6 +438,15 @@ class Fusion2():
                     num_id_1 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[1], mask[:, :, 0] == 255), entropy_mask))
                     if num_id_1 > num_id_0:
                         most_freq_id = num_ids[1]
+                # for synthia
+                elif num_ids[0] == 8 and num_ids[1] == 1:
+                    # [vegetation, sidewalk]
+                    num_id_0 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[0], mask[:, :, 0] == 255), entropy_mask))
+                    num_id_1 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[1], mask[:, :, 0] == 255), entropy_mask))
+                    if num_id_0 / counts[0] > 0.1 and self.num_classes == 19:
+                        most_freq_id = 9 #terrrain
+                    elif counts[1] / counts[0] >= 0.25:
+                        most_freq_id = num_ids[1]
             
             # fill the sam mask using the most frequent trainid in segmentation
             sam_mask[mask[:, :, 0] == 255] = most_freq_id
@@ -444,6 +459,8 @@ class Fusion2():
         color_segmentation = np.zeros((segmentation.shape[0], segmentation.shape[1], 3), dtype=np.uint8)
         train_ids = np.unique(segmentation)
         for train_id in train_ids:
+            if self.num_classes == 16 and train_id in [9, 14, 16]:
+                continue
             color_segmentation[segmentation == train_id] = self.trainid2color(train_id)
         return color_segmentation
         
@@ -550,7 +567,7 @@ class Fusion2():
         
         return fusion_trainid, fusion_color
 
-    def fusion_mode_3(self, segmentation, sam_pred, fusion_trainid_0=None, fusion_color_0=None):
+    def fusion_mode_3(self, segmentation, sam_pred, fusion_trainid_0=None, fusion_color_0=None, entropy_mask=None):
         '''
         segmentation: [h, w, 3]
         sam_pred: [h, w]
@@ -566,8 +583,9 @@ class Fusion2():
         # # 预测结果为road但是sam中和road对应的类别为sidewalk(分割成了同一个mask)，将预测结果改为road
         # mask_road = ((segmentation[:, :, 0] == 0) & (fusion_trainid_0 == 1))
         # 预测结果为siwalk但是sam中和siwalk对应的类别为road(分割成了同一个mask)，将预测结果改为siwalk
-        mask_siwa = ((segmentation[:, :, 0] == 1) & (fusion_trainid_0 == 0))\
-                    | ((segmentation[:, :, 0] == 1) & (fusion_trainid_0 == 0))
+        mask_siwa = ((segmentation[:, :, 0] == 1) & (fusion_trainid_0 == 0))
+        if entropy_mask is not None:
+            mask_siwa = np.logical_and(mask_siwa, entropy_mask)
         # 预测结果为fence但是sam中和fence对应的类别为building(分割成了同一个mask)，将预测结果改为fence
         mask_fenc = ((segmentation[:, :, 0] == 4) & (fusion_trainid_0 == 2))
         # 预测结果为pole但是sam中和pole对应的类别为building/light/sign(分割成了同一个mask)，将预测结果改为pole
@@ -635,7 +653,7 @@ class Fusion2():
         
         return fusion_trainid, fusion_color
     
-    def fusion_mode_5(self, segmentation, sam_pred, entropy_mask):
+    def fusion_mode_5(self, segmentation, sam_pred, fusion_trainid=None, entropy_mask=None):
         '''
         author: weihao_yan
         date:   2023-6-26
@@ -650,9 +668,13 @@ class Fusion2():
             fusion_trainid: [h, w],     uint8, from class 0 to 18
             fusion_color:   [h, w, 3],  uint8,
         '''
-        fusion_trainid, _ = self.fusion_mode_3(segmentation=segmentation, sam_pred=sam_pred)
+        if fusion_trainid is None:
+            fusion_trainid, _ = self.fusion_mode_3(segmentation=segmentation, sam_pred=sam_pred)
         road_mask = (segmentation[:, :, 0] == 0) & (fusion_trainid == 1) & entropy_mask
         fusion_trainid[road_mask] = 0
+        # [vegetation, sidewalk]
+        vege_mask = (segmentation[:, :, 0] == 8) & (fusion_trainid == 1) & entropy_mask
+        fusion_trainid[vege_mask] = 8
         fusion_color = self.color_segmentation(fusion_trainid)
         
         return fusion_trainid, fusion_color
@@ -771,7 +793,7 @@ class Fusion2():
                     confidence_map, entropy_map]
             images_name: the name of the image
             mious: a list of miou and ious,
-                    (miou_1, ious_1), (miou_2, ious_2),(miou_3, ious_3), (miou_4, ious_4)
+                    (miou_0, ious_0), (miou_1, ious_1), (miou_2, ious_2),(miou_3, ious_3), (miou_4, ious_4)
             thresholds: a list of thresholds
                     [confidence_threshold, entropy_threshold]
         '''
@@ -785,18 +807,21 @@ class Fusion2():
         new_total_width = (self.display_size[1] + gap) * col
         
         # 显示的文本列表
-        texts = ['Image', 'Ground Truth', 'SAM', 'Segmentation']
+        texts = ['Image', 'Ground Truth', 'SAM', 'Pred, ']
         for i, (miou, ious) in enumerate(mious):
             # cal the non-zero classes in ious
             unique_classes = np.sum(np.array(ious) != 0)
             mIOU2 = np.sum(np.array(ious)) / unique_classes
             if i == len(mious) - 1:
-                texts.append('f_{}, mIoU19: {:.2f} mIoU{}: {:.2f}'.format(i + 2, miou * 100,
+                texts.append('f_{}, mIoU{}: {:.2f} mIoU{}: {:.2f}'.format(i + 1, self.num_classes, miou * 100,
                                         unique_classes, mIOU2 * 100))
+            elif i == 0:
+                texts[-1] += 'mIoU{}: {:.2f} mIoU{}: {:.2f}'.format(self.num_classes, miou * 100,
+                                        unique_classes, mIOU2 * 100)
             else:
-                texts.append('f_{}, mIoU19: {:.2f} mIoU{}: {:.2f}'.format(i + 1, miou * 100,
+                texts.append('f_{}, mIoU{}: {:.2f} mIoU{}: {:.2f}'.format(i, self.num_classes, miou * 100,
                                         unique_classes, mIOU2 * 100))
-        for i in range(len(mious)):
+        for i in range(len(mious)-1):
             texts.append('Error image f_{}'.format(i + 1))
         texts.append('Confidence')
         texts.append('Entropy')
@@ -864,7 +889,10 @@ class Fusion2():
             pred_color: [H, W, 3]
         output: error_image on pred_color
         '''
-        
+        if self.num_classes == 16:
+            ground_truth[ground_truth==9] = 255
+            ground_truth[ground_truth==14] = 255
+            ground_truth[ground_truth==16] = 255
         error_mask = np.where((predicted != ground_truth) & (ground_truth != 255), 0, 255).astype(np.uint8)
         # predicted_color = self.color_segmentation(predicted)
         # change the area of error mask in pred_color to white

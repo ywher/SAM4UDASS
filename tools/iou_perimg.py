@@ -22,8 +22,12 @@ class SegmentationMetrics:
         return iou
 
     def calculate_miou(self, pred_mask, gt_mask):
+        if self.num_classes == 16:
+            gt_mask[gt_mask == 9] = 255  # terrain
+            gt_mask[gt_mask == 14] = 255  # truck
+            gt_mask[gt_mask == 16] = 255  # train
         class_iou = []
-        for class_id in range(self.num_classes):
+        for class_id in range(19):  # synthia的labelid还是从0-18,只是去除了9,14,16
             pred_class = pred_mask == class_id
             gt_class = gt_mask == class_id
             if np.sum(gt_class) == 0:
@@ -31,6 +35,11 @@ class SegmentationMetrics:
             else:
                 iou = self.calculate_iou(pred_class, gt_class)
             class_iou.append(iou)
+        if self.num_classes == 16:
+            #remove the iou of 9,14,16
+            class_iou.remove(class_iou[16])
+            class_iou.remove(class_iou[14])
+            class_iou.remove(class_iou[9])
         miou = np.mean(class_iou)
         return miou, class_iou
 

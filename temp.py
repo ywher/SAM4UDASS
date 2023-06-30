@@ -56,33 +56,39 @@ for bin_mask_id in np.unique(label):
 
 
 import os
-import itertools
 
 if not os.path.isdir("./mask_prompt/"):
     os.makedirs("./mask_prompt/")
     print("{} made".format("./mask_prompt/"))
 for bin_mask_id in bin_masks:
-    print(bin_mask_id, np.max(bin_masks[bin_mask_id]))
+    print(class_names[bin_mask_id])
     pos = center_points[bin_mask_id]
-    neg = [center_points[mask_id] for mask_id in center_points if mask_id != bin_mask_id]
-    neg = list(itertools.chain(neg))
+    neg = []
+    for mask_id in center_points:
+       if mask_id != bin_mask_id:
+           neg += center_points[mask_id]
+    
     plt.imshow((np.exp(bin_masks[bin_mask_id])/(np.exp(bin_masks[bin_mask_id])+1))[0], cmap="gray")
-    plt.savefig(f"./mask_prompt/type_{bin_mask_id}_mask_prompt.png")
+    plt.savefig(f"./mask_prompt/type_{class_names[bin_mask_id]}_mask_prompt.png")
     plt.show()
+    input_points = np.array(pos + neg)
+    input_labels = np.array([1]*len(pos) + [0]*len(neg)),
     mask, _, logit = predictor.predict(
-    point_coords=np.array(pos + neg),
-    point_labels=np.array([1]*len(pos) + [0]*len(neg)),
+    point_coords= input_points,
+    point_labels= input_labes,
     mask_input = bin_masks[bin_mask_id],
     multimask_output=False,
     )
     plt.figure(figsize=(16, 8))
     plt.imshow(image)
     show_mask(mask, plt.gca())
+    show_points(input_points, input_labels, plt.gca())
     plt.axis('off')
-    plt.savefig(f"./mask_prompt/type_{bin_mask_id}_image_with_mask.png")
+    plt.savefig(f"./mask_prompt/type_{class_names[bin_mask_id]}_image_with_mask.png")
     plt.show()
     plt.close()
     plt.imshow((np.exp(logit)/(np.exp(logit)+1))[0], cmap="gray")
-    plt.savefig(f"./mask_prompt/type_{bin_mask_id}_logit.png")
+    plt.savefig(f"./mask_prompt/type_{class_names[bin_mask_id]}_logit.png")
     plt.show()
+ 
  
