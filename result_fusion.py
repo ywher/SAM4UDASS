@@ -311,7 +311,7 @@ class Fusion2():
         self.num_classes = num_classes
         # the path to the ground truth folder
         self.gt_folder = gt_folder
-        self.gt_color_folder = self.gt_folder.replace('train_all', 'train_gt_color')
+        # self.gt_color_folder = self.gt_folder.replace('train_all', 'train_gt_color')
         # the path to the original image
         self.image_folder = image_folder
         # the mix ratio of the fusion result and original image

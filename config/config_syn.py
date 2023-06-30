@@ -52,7 +52,7 @@ sam_classes = [11, 12, 13, 14, 15, 16, 17, 18]  # 11 classes, 5, 6, 7,
 # 
 shrink_num = 2
 # 
-display_size = (300, 600)
+display_size = (350, 700)
 # whether to save the mixed result
 save_mix_result = False
 save_all_fusion = True
