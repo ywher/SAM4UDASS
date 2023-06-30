@@ -27,7 +27,7 @@ mix_ratio = 0.5
 # 
 resize_ratio = 0.5
 # 
-output_folder = 'outputs/cityscapes/debug_syn' #这是去掉了mask按照名称排序的过程
+output_folder = 'outputs/cityscapes/debug_syn_tmp' #这是去掉了mask按照名称排序的过程
 # 
 mask_suffix = '.png'
 # 
@@ -52,7 +52,7 @@ sam_classes = [11, 12, 13, 14, 15, 16, 17, 18]  # 11 classes, 5, 6, 7,
 # 
 shrink_num = 2
 # 
-display_size = (400, 800)
+display_size = (300, 600)
 # whether to save the mixed result
 save_mix_result = False
 save_all_fusion = True
@@ -61,5 +61,5 @@ save_all_fusion = True
 num_classes = 16
 
 # num of images to process
-debug_num = 562 # 2975
-begin_index = 2413 # 0
+debug_num = 2975 # 2975
+begin_index = 0 # 0

@@ -63,6 +63,6 @@ def divide_sign_pole(mask, kernel_size=None, iterations=1):
     return upper_part, lower_part
 
 if __name__ == '__main__':
-    mask = cv2.imread('0.png')
+    mask = cv2.imread('utils/images/81.png')
     # kernel_size = 20
     divide_sign_pole(mask)

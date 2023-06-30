@@ -586,6 +586,7 @@ class Fusion2():
         mask_siwa = ((segmentation[:, :, 0] == 1) & (fusion_trainid_0 == 0))
         if entropy_mask is not None:
             mask_siwa = np.logical_and(mask_siwa, entropy_mask)
+        mask_buil = ((segmentation[:, :, 0] == 2) & (fusion_trainid_0 == 10))
         # 预测结果为fence但是sam中和fence对应的类别为building(分割成了同一个mask)，将预测结果改为fence
         mask_fenc = ((segmentation[:, :, 0] == 4) & (fusion_trainid_0 == 2))
         # 预测结果为pole但是sam中和pole对应的类别为building/light/sign(分割成了同一个mask)，将预测结果改为pole
@@ -600,6 +601,8 @@ class Fusion2():
         mask_sign = ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 2))\
                     | ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 8))
         mask_sign_2 = ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 5))  # [H, W]
+        # 预测结果为car但是sam中和car对应的类别为vegetation(分割成了同一个mask)，将预测结果改为car
+        mask_car = ((segmentation[:, :, 0] == 13) & (fusion_trainid_0 == 8))  # 
         mask_bike = (segmentation[:, :, 0] == 18)
         if np.max(mask_sign_2):  # 如果mask_sign_2中有值
             # 注意要先试用np.newaxis将mask_sign_2的维度扩展为3维，
@@ -621,6 +624,7 @@ class Fusion2():
         fusion_trainid_0[mask_ligh] = 6
         fusion_trainid_0[mask_sign] = 7
         fusion_trainid_0[mask_person] = 11
+        fusion_trainid_0[mask_car] = 13
         # print(fusion_ids)
         # if 18 not in fusion_ids:
         fusion_trainid_0[mask_bike] = 18
@@ -787,36 +791,34 @@ class Fusion2():
             display the images horizontally and save the result
         input:
             images: a list of images, 3 * 4 = 12 images
-                    [image, ground truth, sam seg, model seg,
-                    fusion_1_result, fusion_2_result, fusion_3_result, fusion_4_result,
-                    error_1, error_2, error_3, error_4,
+                    [image, ground truth, sam seg, model seg, error_0
+                    fusion_1_result, fusion_2_result, fusion_3_result, fusion_4_result, fusion_5_result,
+                    error_1, error_2, error_3, error_4, error_5,
                     confidence_map, entropy_map]
             images_name: the name of the image
             mious: a list of miou and ious,
-                    (miou_0, ious_0), (miou_1, ious_1), (miou_2, ious_2),(miou_3, ious_3), (miou_4, ious_4)
+                    (miou_0, ious_0), (miou_1, ious_1), (miou_2, ious_2), 
+                    (miou_3, ious_3), (miou_4, ious_4), (miou_5, ious_5),
             thresholds: a list of thresholds
                     [confidence_threshold, entropy_threshold]
         '''
         # 获取最大高度和总宽度
         # max_height = max(image.shape[0] for image in images)
         # total_width = sum(image.shape[1] for image in images)
-        col = 4
+        col = 5
         row = len(images) // col + 1 if len(images) % col != 0 else len(images) // col
         gap = 10  # the gap between two images horizontally
         new_height = self.display_size[0] * row
         new_total_width = (self.display_size[1] + gap) * col
         
         # 显示的文本列表
-        texts = ['Image', 'Ground Truth', 'SAM', 'Pred, ']
+        texts = ['Image', 'Ground Truth', 'SAM', 'Pred, ', 'Error image of pred']
         for i, (miou, ious) in enumerate(mious):
             # cal the non-zero classes in ious
             unique_classes = np.sum(np.array(ious) != 0)
             mIOU2 = np.sum(np.array(ious)) / unique_classes
-            if i == len(mious) - 1:
-                texts.append('f_{}, mIoU{}: {:.2f} mIoU{}: {:.2f}'.format(i + 1, self.num_classes, miou * 100,
-                                        unique_classes, mIOU2 * 100))
-            elif i == 0:
-                texts[-1] += 'mIoU{}: {:.2f} mIoU{}: {:.2f}'.format(self.num_classes, miou * 100,
+            if i == 0:
+                texts[-2] += 'mIoU{}: {:.2f} mIoU{}: {:.2f}'.format(self.num_classes, miou * 100,
                                         unique_classes, mIOU2 * 100)
             else:
                 texts.append('f_{}, mIoU{}: {:.2f} mIoU{}: {:.2f}'.format(i, self.num_classes, miou * 100,
@@ -859,22 +861,27 @@ class Fusion2():
         # cv2.waitKey(100)
         # cv2.destroyAllWindows()
     
-    def save_ious(self, miou_1, ious_1, miou_2, ious_2, miou_3, ious_3, miou_4, ious_4, image_name):
+    def save_ious(self, miou_1, ious_1, miou_2, ious_2, miou_3, ious_3, 
+                  miou_4, ious_4, miou_5, ious_5, image_name):
         miou_diff_2_1 = round((miou_2 - miou_1) * 100, 2)
         miou_diff_3_1 = round((miou_3 - miou_1) * 100, 2)
-        miou_diff_4_1 = round((miou_4 - miou_1) * 100, 2) 
+        miou_diff_4_1 = round((miou_4 - miou_1) * 100, 2)
+        miou_diff_5_1 = round((miou_5 - miou_1) * 100, 2)
         iou_diff_2_1 = [round((ious_2[i] - ious_1[i]) * 100, 2) for i in range(len(ious_1))]
         iou_diff_3_1 = [round((ious_3[i] - ious_1[i]) * 100, 2) for i in range(len(ious_1))]
         iou_diff_4_1 = [round((ious_4[i] - ious_1[i]) * 100, 2) for i in range(len(ious_1))]
+        iou_diff_5_1 = [round((ious_5[i] - ious_1[i]) * 100, 2) for i in range(len(ious_1))]
         data = pd.DataFrame({
             'class': ['mIoU'] + [name for name in self.label_names],
             'Fusion 1': [round(miou_1 * 100, 2)] + [round(ious_1[i] * 100, 2) for i in range(len(ious_1))],
             'Fusion 2': [round(miou_2 * 100, 2)] + [round(ious_2[i] * 100, 2) for i in range(len(ious_2))],
             'Fusion 3': [round(miou_3 * 100, 2)] + [round(ious_3[i] * 100, 2) for i in range(len(ious_3))],
             'Fusion 4': [round(miou_4 * 100, 2)] + [round(ious_4[i] * 100, 2) for i in range(len(ious_4))],
+            'Fusion 5': [round(miou_5 * 100, 2)] + [round(ious_5[i] * 100, 2) for i in range(len(ious_5))],
             'Differ_2_1': [miou_diff_2_1] + iou_diff_2_1,
             'Differ_3_1': [miou_diff_3_1] + iou_diff_3_1,
             'Differ_4_1': [miou_diff_4_1] + iou_diff_4_1,
+            'Differ_5_1': [miou_diff_5_1] + iou_diff_5_1,
         })
 
         # save the miou and class ious
