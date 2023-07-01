@@ -447,6 +447,10 @@ class Fusion2():
                         most_freq_id = 9 #terrrain
                     elif counts[1] / counts[0] >= 0.25:
                         most_freq_id = num_ids[1]
+                elif num_ids[0] == 0 and num_ids[1] == 1:
+                    # [road, sidewalk]
+                    if counts[1] / counts[0] >= 0.5:
+                        most_freq_id = num_ids[1]
             
             # fill the sam mask using the most frequent trainid in segmentation
             sam_mask[mask[:, :, 0] == 255] = most_freq_id
@@ -567,7 +571,8 @@ class Fusion2():
         
         return fusion_trainid, fusion_color
 
-    def fusion_mode_3(self, segmentation, sam_pred, fusion_trainid_0=None, fusion_color_0=None, entropy_mask=None):
+    def fusion_mode_3(self, segmentation, sam_pred, fusion_trainid_0=None, fusion_color_0=None, 
+                      confidence_mask=None, entropy_mask=None):
         '''
         segmentation: [h, w, 3]
         sam_pred: [h, w]
@@ -631,7 +636,7 @@ class Fusion2():
         fusion_color_0 = self.color_segmentation(fusion_trainid_0)
         return fusion_trainid_0, fusion_color_0
 
-    def fusion_mode_4(self, segmentation, sam_pred, confidence_mask, fusion_trainid=None):
+    def fusion_mode_4(self, segmentation, sam_pred, fusion_trainid=None, confidence_mask=None):
         '''
         author: weihao_yan
         date:   2023-6-26
@@ -646,13 +651,16 @@ class Fusion2():
             fusion_trainid: [h, w],     uint8, from class 0 to 18
             fusion_color:   [h, w, 3],  uint8,
         '''
+        
         if fusion_trainid is None:
             fusion_trainid, _ = self.fusion_mode_3(segmentation=segmentation, sam_pred=sam_pred)
         else:
             # print('copy in fusion 4')
             fusion_trainid = copy.deepcopy(fusion_trainid)
         road_mask = (segmentation[:, :, 0] == 0) & (fusion_trainid == 1) & confidence_mask
-        fusion_trainid[road_mask] = 0
+        side_mask = (segmentation[:, :, 0] == 1) & (fusion_trainid == 0) & confidence_mask
+        fusion_trainid[road_mask] = 0  # road
+        fusion_trainid[side_mask] = 1  # sidewalk
         fusion_color = self.color_segmentation(fusion_trainid)
         
         return fusion_trainid, fusion_color
@@ -674,10 +682,15 @@ class Fusion2():
         '''
         if fusion_trainid is None:
             fusion_trainid, _ = self.fusion_mode_3(segmentation=segmentation, sam_pred=sam_pred)
+        # [road, sidewalk]
         road_mask = (segmentation[:, :, 0] == 0) & (fusion_trainid == 1) & entropy_mask
-        fusion_trainid[road_mask] = 0
+        # [sidewalk, road]
+        side_mask = (segmentation[:, :, 0] == 1) & (fusion_trainid == 0) & entropy_mask
         # [vegetation, sidewalk]
         vege_mask = (segmentation[:, :, 0] == 8) & (fusion_trainid == 1) & entropy_mask
+        
+        fusion_trainid[road_mask] = 0
+        fusion_trainid[side_mask] = 1
         fusion_trainid[vege_mask] = 8
         fusion_color = self.color_segmentation(fusion_trainid)
         
