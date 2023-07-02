@@ -19,6 +19,7 @@ import pandas as pd
 import copy
 import matplotlib.pyplot as plt
 from utils.mask_shape import Mask_Shape
+from utils.cal_mask_center import cal_center, inside_rect
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
@@ -292,7 +293,7 @@ class Fusion():
 
 class Fusion2():
     def __init__(self, mask_folder=None, segmentation_folder=None, confidence_folder=None, entropy_folder=None,
-                 image_folder=None, gt_folder=None, num_classes=None,
+                 image_folder=None, gt_folder=None, num_classes=None, road_center_rect=None,
                  mix_ratio=None, resize_ratio=None, output_folder=None, mask_suffix=None,
                  segmentation_suffix=None, segmentation_suffix_noimg=None,
                  confidence_suffix=None, entropy_suffix=None, gt_suffix=None,
@@ -309,6 +310,8 @@ class Fusion2():
         self.entropy_suffix = entropy_suffix
         # the number of classes
         self.num_classes = num_classes
+        # the rect of the road center
+        self.road_center_rect = road_center_rect
         # the path to the ground truth folder
         self.gt_folder = gt_folder
         # self.gt_color_folder = self.gt_folder.replace('train_all', 'train_gt_color')
@@ -368,7 +371,7 @@ class Fusion2():
         else:
             print('the path is already exist')
 
-    def get_sam_pred(self, image_name, segmentation, entropy_mask):
+    def get_sam_pred(self, image_name, segmentation, confidence_mask=None, entropy_mask=None):
         '''
         use the mask from sam and the prediction from uda
         output the trainid and color mask
@@ -376,16 +379,16 @@ class Fusion2():
         '''
         # get the mask names
         mask_names = [name for name in os.listdir(os.path.join(self.mask_folder, image_name)) if self.mask_suffix in name]
-        mask_names.sort()
+        # mask_names.sort()
         
-        # sort the mask names accrording to the mask area from large to small
-        # mask_areas = []
-        # for mask_name in mask_names:
-        #     mask_path = os.path.join(self.mask_folder, image_name, mask_name)
-        #     mask = cv2.imread(mask_path)  # [h,w,3]
-        #     mask_area = np.sum(mask[:, :, 0] == 255)
-        #     mask_areas.append(mask_area)
-        # mask_names = [mask_name for _, mask_name in sorted(zip(mask_areas, mask_names), reverse=True)]
+        # sort the mask names accrording to the mask area from large to small, can offline
+        mask_areas = []
+        for mask_name in mask_names:
+            mask_path = os.path.join(self.mask_folder, image_name, mask_name)
+            mask = cv2.imread(mask_path)  # [h,w,3]
+            mask_area = np.sum(mask[:, :, 0] == 255)
+            mask_areas.append(mask_area)
+        mask_names = [mask_name for _, mask_name in sorted(zip(mask_areas, mask_names), reverse=True)]
         
         sam_mask = np.ones_like(segmentation[:, :, 0], dtype=np.uint8) * 255
         for mask_name in mask_names:
@@ -415,6 +418,9 @@ class Fusion2():
                     # if the building is the first class and the pole is the second class, 
                     # and the ratio of pole to building is larger than 0.25
                     # then assign the mask with pole
+                    most_freq_id = num_ids[1]
+                elif num_ids[0] == 2 and num_ids[1] == 4 and counts[1] / counts[0] >= 0.15:
+                    # [building, fence]
                     most_freq_id = num_ids[1]
                 elif num_ids[0] == 2 and num_ids[1] == 7 and counts[1] / counts[0] >= 0.1:
                     # [building, traffic sign]
@@ -447,11 +453,24 @@ class Fusion2():
                         most_freq_id = 9 #terrrain
                     elif counts[1] / counts[0] >= 0.25:
                         most_freq_id = num_ids[1]
+                elif num_ids[0] == 8 and num_ids[1] == 2:
+                    # [vegetation, building], 窗户被判断为vegetation
+                    num_id_0 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[0], 
+                                                    mask[:, :, 0] == 255), confidence_mask))
+                    num_id_1 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[1], 
+                                                    mask[:, :, 0] == 255), confidence_mask))
+                    if num_id_0 ==0 or num_id_1 / num_id_0 > 0.25:
+                        most_freq_id = num_ids[1]
                 elif num_ids[0] == 0 and num_ids[1] == 1:
                     # [road, sidewalk]
                     if counts[1] / counts[0] >= 0.5:
                         most_freq_id = num_ids[1]
-            
+                elif num_ids[0] == 1 and num_ids[1] == 0:
+                    # [sidewalk, road]
+                    mask_center = cal_center(mask[:, :, 0])
+                    if inside_rect(mask_center, self.road_center_rect):
+                        most_freq_id = num_ids[1]
+                    
             # fill the sam mask using the most frequent trainid in segmentation
             sam_mask[mask[:, :, 0] == 255] = most_freq_id
             # print('mask_name {}, most_freq_id{}'.format(mask_name, most_freq_id))
@@ -589,8 +608,10 @@ class Fusion2():
         # mask_road = ((segmentation[:, :, 0] == 0) & (fusion_trainid_0 == 1))
         # 预测结果为siwalk但是sam中和siwalk对应的类别为road(分割成了同一个mask)，将预测结果改为siwalk
         mask_siwa = ((segmentation[:, :, 0] == 1) & (fusion_trainid_0 == 0))
-        if entropy_mask is not None:
-            mask_siwa = np.logical_and(mask_siwa, entropy_mask)
+        if confidence_mask is not None:
+            mask_siwa = np.logical_and(mask_siwa, confidence_mask)
+        # if entropy_mask is not None:
+            # mask_siwa = np.logical_and(mask_siwa, entropy_mask)
         mask_buil = ((segmentation[:, :, 0] == 2) & (fusion_trainid_0 == 10))
         # 预测结果为fence但是sam中和fence对应的类别为building(分割成了同一个mask)，将预测结果改为fence
         mask_fenc = ((segmentation[:, :, 0] == 4) & (fusion_trainid_0 == 2))
@@ -623,7 +644,9 @@ class Fusion2():
         mask_person = ((segmentation[:, :, 0] == 11) & (fusion_trainid_0 == 2))\
             
         # fusion_trainid_0[mask_road] = 0
-        fusion_trainid_0[mask_siwa] = 1
+        f0_road_mask = (fusion_trainid_0 == 0).astype(np.uint8)
+        if f0_road_mask.any() and not inside_rect(cal_center(f0_road_mask), self.road_center_rect):
+            fusion_trainid_0[mask_siwa] = 1
         fusion_trainid_0[mask_fenc] = 4
         fusion_trainid_0[mask_pole] = 5
         fusion_trainid_0[mask_ligh] = 6
@@ -874,27 +897,31 @@ class Fusion2():
         # cv2.waitKey(100)
         # cv2.destroyAllWindows()
     
-    def save_ious(self, miou_1, ious_1, miou_2, ious_2, miou_3, ious_3, 
+    def save_ious(self, miou_0, ious_0, miou_1, ious_1, miou_2, ious_2, miou_3, ious_3, 
                   miou_4, ious_4, miou_5, ious_5, image_name):
-        miou_diff_2_1 = round((miou_2 - miou_1) * 100, 2)
-        miou_diff_3_1 = round((miou_3 - miou_1) * 100, 2)
-        miou_diff_4_1 = round((miou_4 - miou_1) * 100, 2)
-        miou_diff_5_1 = round((miou_5 - miou_1) * 100, 2)
-        iou_diff_2_1 = [round((ious_2[i] - ious_1[i]) * 100, 2) for i in range(len(ious_1))]
-        iou_diff_3_1 = [round((ious_3[i] - ious_1[i]) * 100, 2) for i in range(len(ious_1))]
-        iou_diff_4_1 = [round((ious_4[i] - ious_1[i]) * 100, 2) for i in range(len(ious_1))]
-        iou_diff_5_1 = [round((ious_5[i] - ious_1[i]) * 100, 2) for i in range(len(ious_1))]
+        miou_diff_1_0 = round((miou_1 - miou_0) * 100, 2)
+        miou_diff_2_0 = round((miou_2 - miou_0) * 100, 2)
+        miou_diff_3_0 = round((miou_3 - miou_0) * 100, 2)
+        miou_diff_4_0 = round((miou_4 - miou_0) * 100, 2)
+        miou_diff_5_0 = round((miou_5 - miou_0) * 100, 2)
+        iou_diff_1_0 = [round((ious_1[i] - ious_0[i]) * 100, 2) for i in range(len(ious_0))]
+        iou_diff_2_0 = [round((ious_2[i] - ious_0[i]) * 100, 2) for i in range(len(ious_0))]
+        iou_diff_3_0 = [round((ious_3[i] - ious_0[i]) * 100, 2) for i in range(len(ious_0))]
+        iou_diff_4_0 = [round((ious_4[i] - ious_0[i]) * 100, 2) for i in range(len(ious_0))]
+        iou_diff_5_0 = [round((ious_5[i] - ious_0[i]) * 100, 2) for i in range(len(ious_0))]
         data = pd.DataFrame({
             'class': ['mIoU'] + [name for name in self.label_names],
+            'UDA seg':  [round(miou_0 * 100, 2)] + [round(ious_0[i] * 100, 2) for i in range(len(ious_0))],
             'Fusion 1': [round(miou_1 * 100, 2)] + [round(ious_1[i] * 100, 2) for i in range(len(ious_1))],
             'Fusion 2': [round(miou_2 * 100, 2)] + [round(ious_2[i] * 100, 2) for i in range(len(ious_2))],
             'Fusion 3': [round(miou_3 * 100, 2)] + [round(ious_3[i] * 100, 2) for i in range(len(ious_3))],
             'Fusion 4': [round(miou_4 * 100, 2)] + [round(ious_4[i] * 100, 2) for i in range(len(ious_4))],
             'Fusion 5': [round(miou_5 * 100, 2)] + [round(ious_5[i] * 100, 2) for i in range(len(ious_5))],
-            'Differ_2_1': [miou_diff_2_1] + iou_diff_2_1,
-            'Differ_3_1': [miou_diff_3_1] + iou_diff_3_1,
-            'Differ_4_1': [miou_diff_4_1] + iou_diff_4_1,
-            'Differ_5_1': [miou_diff_5_1] + iou_diff_5_1,
+            'Differ_1_0': [miou_diff_1_0] + iou_diff_1_0,
+            'Differ_2_0': [miou_diff_2_0] + iou_diff_2_0,
+            'Differ_3_0': [miou_diff_3_0] + iou_diff_3_0,
+            'Differ_4_0': [miou_diff_4_0] + iou_diff_4_0,
+            'Differ_5_0': [miou_diff_5_0] + iou_diff_5_0,
         })
 
         # save the miou and class ious
