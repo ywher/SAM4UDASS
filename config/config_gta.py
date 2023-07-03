@@ -27,7 +27,7 @@ mix_ratio = 0.5
 # 
 resize_ratio = 0.5
 # 
-output_folder = 'outputs/cityscapes/debug_syn' #这是去掉了mask按照名称排序的过程
+output_folder = 'outputs/cityscapes/debug_gta' #这是去掉了mask按照名称排序的过程
 # 
 mask_suffix = '.png'
 # 
@@ -39,7 +39,7 @@ segmentation_suffix_noimg=False
 #
 confidence_suffix = '_confi.npy'
 entropy_suffix = '_entro.npy'
-confidence_threshold = 0.95  # absolute value
+confidence_threshold = 0.99  # absolute value
 entropy_ratio = 60  # relative value, lowest 70% entropy
 #
 gt_suffix = '_gtFine_labelTrainIds.png'
@@ -48,18 +48,20 @@ gt_suffix = '_gtFine_labelTrainIds.png'
 # fusion_mode = 0
 fusion_mode = 3
 # 
-sam_classes = [11, 12, 13, 14, 15, 16, 17, 18]  # 11 classes, 5, 6, 7, 
+sam_classes = [5, 6, 7, 11, 12, 13, 14, 15, 16, 17, 18]  # 11 classes, 5, 6, 7, 
 # 
 shrink_num = 2
 # 
-display_size = (400, 800)
+display_size = (350, 700)
+#
+road_center_rect = (740, 780, 1645, 995)  # (740, 810, 1625, 995)
 # whether to save the mixed result
 save_mix_result = False
-save_all_fusion = False
+save_all_fusion = True
 
 #num of classes, 16 for synthia, 19 for gta5
 num_classes = 19
 
 # num of images to process
-debug_num = 20 # 2975
+debug_num = 2975 # 2975 - 2371 = 604
 begin_index = 0 # 0
