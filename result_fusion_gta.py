@@ -231,4 +231,3 @@ if __name__ == '__main__':
             cv2.imwrite(os.path.join(f5_output_folder, image_name + fusion.mask_suffix), fusion_trainid_bg_5)
         bar.update(1)
     bar.close()
- 

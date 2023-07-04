@@ -27,7 +27,7 @@ mix_ratio = 0.5
 # 
 resize_ratio = 0.5
 # 
-output_folder = 'outputs/cityscapes/debug_gta' #这是去掉了mask按照名称排序的过程
+output_folder = 'outputs/cityscapes/debug_gta2' #这是去掉了mask按照名称排序的过程
 # 
 mask_suffix = '.png'
 # 
@@ -63,5 +63,5 @@ save_all_fusion = True
 num_classes = 19
 
 # num of images to process
-debug_num = 1 # 2975 - 2371 = 604
-begin_index = 23 # 0
+debug_num = 1327 # 2975 - 1648 = 1327
+begin_index = 1648 # 0
