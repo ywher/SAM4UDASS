@@ -18,6 +18,7 @@ from utils.shrink_mask import shrink_region
 import pandas as pd
 import copy
 import matplotlib.pyplot as plt
+from natsort import natsorted
 from utils.mask_shape import Mask_Shape
 from utils.cal_mask_center import cal_center, inside_rect
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -378,7 +379,7 @@ class Fusion_SYN():
         '''
         # get the mask names
         mask_names = [name for name in os.listdir(os.path.join(self.mask_folder, image_name)) if self.mask_suffix in name]
-        mask_names.sort()  #现在已经按照mask的面积进行了从大到小的排序
+        mask_names = natsorted(mask_names)  #现在已经按照mask的面积进行了从大到小的排序
         
         # sort the mask names accrording to the mask area from large to small, can offline
         # mask_areas = []
@@ -1041,9 +1042,10 @@ class Fusion_GTA():
         '''
         # get the mask names
         mask_names = [name for name in os.listdir(os.path.join(self.mask_folder, image_name)) if self.mask_suffix in name]
-        mask_names.sort()  #现在已经按照mask的面积进行了从大到小的排序
+        #现在已经按照mask的面积进行了从大到小的排序,序号从0开始
+        mask_names = natsorted(mask_names)
         
-        # sort the mask names accrording to the mask area from large to small, can offline
+        # 将mask按照面积从大到小进行排序,由于占用融合时间,目前已经离线完成
         # mask_areas = []
         # for mask_name in mask_names:
         #     mask_path = os.path.join(self.mask_folder, image_name, mask_name)
@@ -1053,7 +1055,7 @@ class Fusion_GTA():
         # mask_names = [mask_name for _, mask_name in sorted(zip(mask_areas, mask_names), reverse=True)]
         
         sam_mask = np.ones_like(segmentation[:, :, 0], dtype=np.uint8) * 255
-        for index, mask_name in  enumerate(mask_names):
+        for index, mask_name in enumerate(mask_names):
             mask_path = os.path.join(self.mask_folder, image_name, mask_name)
             mask = cv2.imread(mask_path)  # [h,w,3]
             # print('mask name', mask_name)
@@ -1062,45 +1064,33 @@ class Fusion_GTA():
             # cv2.destroyAllWindows()
             # get the number of trainids in the segmentation result using the mask with value 255
             trainids = segmentation[:, :, 0][mask[:, :, 0] == 255]  # [N,]
-            num_ids, counts = np.unique(trainids, return_counts=True) # [n, ], [n1, n2, n3, ...]
+            num_ids, counts = np.unique(trainids, return_counts=True)  # [n, ], [n1, n2, n3, ...]
             # sort the num_ids according to the counts
             num_ids = [num_id for _, num_id in sorted(zip(counts, num_ids), reverse=True)]
             counts = sorted(counts, reverse=True)
-            # print the top 3 classes
-            # print('image_name: ', image_name)
-            # print('class', num_ids[:3])
-            # print('class names', [self.label_names[num_id] for num_id in num_ids[:3]])
-            # print('counts', counts[:3])
-            # get the most frequent trainid
             most_freq_id = num_ids[0]
             
             if len(counts) >= 2:
-                if num_ids[0] == 2 and num_ids[1] == 5 and counts[1] / counts[0] >= 0.15:
-                    # [building, pole]
-                    # if the building is the first class and the pole is the second class, 
-                    # and the ratio of pole to building is larger than 0.25
-                    # then assign the mask with pole
-                    most_freq_id = num_ids[1]
-                elif num_ids[0] == 2 and num_ids[1] == 3 and counts[1] / counts[0] >= 0.3:
+                if num_ids[0] == 2 and num_ids[1] == 3 and counts[1] / counts[0] >= 0.3:
+                    # [building, wall]
                     most_freq_id = num_ids[1]
                 elif num_ids[0] == 2 and num_ids[1] == 4 and counts[1] / counts[0] >= 0.25:
                     # [building, fence]
                     most_freq_id = num_ids[1]
+                elif num_ids[0] == 2 and num_ids[1] == 5 and counts[1] / counts[0] >= 0.15:
+                    # [building, pole]
+                    most_freq_id = num_ids[1]
                 elif num_ids[0] == 2 and num_ids[1] == 7 and counts[1] / counts[0] >= 0.1:
                     # [building, traffic sign]
-                    # if the building is the first class and the traffic sign is the second class,
                     mask_shape = Mask_Shape(mask)
+                    # if the mask is rectangular or triangular, then assign the mask with traffic sign
                     if mask_shape.is_approx_rectangular() or mask_shape.is_approx_triangular():
-                        # if the mask is rectangular or triangular, 
-                        # then assign the mask with traffic sign
                         most_freq_id = num_ids[1]
-                    # most_freq_id = num_ids[1]
-                elif num_ids[0] == 8 and num_ids[1] == 9 and counts[1] / counts[0] >= 0.05:
-                    # [traffic sign, vegetation]
-                    # if the vegetation is the first class and the terrain is the second class,
-                    most_freq_id = num_ids[1]
                 elif num_ids[0] == 3 and num_ids[1] == 4 and counts[1] / counts[0] >= 0.25:
                     # [wall, fence]
+                    most_freq_id = num_ids[1]
+                elif num_ids[0] == 8 and num_ids[1] == 9 and counts[1] / counts[0] >= 0.05:
+                    # [vegetation, terrain]
                     most_freq_id = num_ids[1]
                 elif num_ids[0] == 9 and num_ids[1] == 1:
                     # [terrain, sidewalk]
@@ -1129,19 +1119,17 @@ class Fusion_GTA():
                     # [road, sidewalk]
                     if index == 0:
                         most_freq_id = 0
-                    elif counts[1] / counts[0] >= 0.5:
+                    elif counts[1] / counts[0] >= 0.75:
                         most_freq_id = num_ids[1]
-                elif (num_ids[0] == 1 and num_ids[1] == 0) or \
-                    (len(counts) >= 3 and num_ids[0] == 1 and num_ids[2] == 0):
-                    # [sidewalk, road]
-                    mask_center = cal_center(mask[:, :, 0])
-                    if inside_rect(mask_center, self.road_center_rect):
-                        most_freq_id = 0
-                    if index == 0:  #第一张图mask通常就是road
-                        most_freq_id = 0
+                # elif (num_ids[0] == 1 and num_ids[1] == 0) or \
+                #     (len(counts) >= 3 and num_ids[0] == 1 and num_ids[2] == 0):
+                #     # [sidewalk, road]
+                #     mask_center = cal_center(mask[:, :, 0])
+                #     if inside_rect(mask_center, self.road_center_rect) or index == 0:
+                #         most_freq_id = 0
                     
             # fill the sam mask using the most frequent trainid in segmentation
-            sam_mask[mask[:, :, 0] == 255] = most_freq_id  # 重叠的问题
+            sam_mask[mask[:, :, 0] == 255] = most_freq_id  # 存在重叠的问题
             # print('mask_name {}, most_freq_id{}'.format(mask_name, most_freq_id))
         return sam_mask
         
