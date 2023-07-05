@@ -27,7 +27,7 @@ mix_ratio = 0.5
 # 
 resize_ratio = 0.5
 # 
-output_folder = 'outputs/cityscapes/debug_syn_tmp2' #这是去掉了mask按照名称排序的过程
+output_folder = 'outputs/cityscapes/debug_syn_tmp' #这是去掉了mask按照名称排序的过程
 # 
 mask_suffix = '.png'
 # 
@@ -63,5 +63,5 @@ save_all_fusion = True
 num_classes = 16
 
 # num of images to process
-debug_num = 1 # 2975 - 2627 = 348
-begin_index = 2976 # 0
+debug_num = 1718 # 2975 - 1257 = 
+begin_index = 1257 # 0

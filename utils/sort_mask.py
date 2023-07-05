@@ -54,10 +54,10 @@ def sort_masks(folder_path):
 
 if __name__ == '__main__':
     # 示例用法
-    folder_path = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/cityscapes/train2'
+    folder_path = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/ACDC/train2'
     mapping_dict = sort_masks(folder_path)
 
     # 将映射关系保存到 JSON 文件
-    output_file = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/cityscapes/mapping_train2.json'
+    output_file = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/ACDC/mapping_train2.json'
     with open(output_file, 'w') as f:
         json.dump(mapping_dict, f, indent=2)
