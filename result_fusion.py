@@ -1075,56 +1075,51 @@ class Fusion_GTA():
             most_freq_id = num_ids[0]
             
             if len(counts) >= 2:
+                # [building, wall]
                 if num_ids[0] == 2 and num_ids[1] == 3 and counts[1] / counts[0] >= 0.3:
-                    # [building, wall]
                     most_freq_id = num_ids[1]
+                # [building, fence]
                 elif num_ids[0] == 2 and num_ids[1] == 4 and counts[1] / counts[0] >= 0.25:
-                    # [building, fence]
                     most_freq_id = num_ids[1]
+                # [building, pole]
                 elif num_ids[0] == 2 and num_ids[1] == 5 and counts[1] / counts[0] >= 0.15:
-                    # [building, pole]
                     most_freq_id = num_ids[1]
+                # [building, traffic sign]
                 elif num_ids[0] == 2 and num_ids[1] == 7 and counts[1] / counts[0] >= 0.1:
-                    # [building, traffic sign]
                     mask_shape = Mask_Shape(mask)
                     # if the mask is rectangular or triangular, then assign the mask with traffic sign
                     if mask_shape.is_approx_rectangular() or mask_shape.is_approx_triangular():
                         most_freq_id = num_ids[1]
+                # [wall, fence]
                 elif num_ids[0] == 3 and num_ids[1] == 4 and counts[1] / counts[0] >= 0.25:
-                    # [wall, fence]
                     most_freq_id = num_ids[1]
+                # [vegetation, terrain]
                 elif num_ids[0] == 8 and num_ids[1] == 9 and counts[1] / counts[0] >= 0.05:
-                    # [vegetation, terrain]
                     most_freq_id = num_ids[1]
+                # [terrain, sidewalk]
                 elif num_ids[0] == 9 and num_ids[1] == 1:
-                    # [terrain, sidewalk]
                     num_id_0 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[0], mask[:, :, 0] == 255), entropy_mask))
                     num_id_1 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[1], mask[:, :, 0] == 255), entropy_mask))
                     if num_id_1 > num_id_0:
                         most_freq_id = num_ids[1]
                 # for synthia
-                elif num_ids[0] == 8 and num_ids[1] == 1:
-                    # [vegetation, sidewalk]
-                    num_id_0 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[0], mask[:, :, 0] == 255), entropy_mask))
-                    num_id_1 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[1], mask[:, :, 0] == 255), entropy_mask))
-                    if num_id_0 / counts[0] > 0.1 and self.num_classes == 19:
-                        most_freq_id = 9 #terrrain
-                    elif counts[1] / counts[0] >= 0.25:
-                        most_freq_id = num_ids[1]
+                # [vegetation, building], 窗户被判断为vegetation
                 elif num_ids[0] == 8 and num_ids[1] == 2:
-                    # [vegetation, building], 窗户被判断为vegetation
                     num_id_0 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[0], 
                                                     mask[:, :, 0] == 255), confidence_mask))
                     num_id_1 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[1], 
                                                     mask[:, :, 0] == 255), confidence_mask))
                     if num_id_0 ==0 or num_id_1 / num_id_0 > 0.25:
                         most_freq_id = num_ids[1]
-                elif num_ids[0] == 0 and num_ids[1] == 1:
-                    # [road, sidewalk]
-                    if index == 0:
-                        most_freq_id = 0
-                    elif counts[1] / counts[0] >= 0.75:
-                        most_freq_id = num_ids[1]
+                # [road, sidewalk]
+                # elif num_ids[0] == 0 and num_ids[1] == 1:
+                #     if index == 0:
+                #         most_freq_id = 0
+                #     elif counts[1] / counts[0] >= 0.75:
+                #         most_freq_id = num_ids[1]
+                # [sidewalk, bicycle]
+                elif num_ids[0] == 1 and num_ids[1] == 18 and counts[1] / counts[0] >= 0.15:
+                    most_freq_id = num_ids[1]
                 # elif (num_ids[0] == 1 and num_ids[1] == 0) or \
                 #     (len(counts) >= 3 and num_ids[0] == 1 and num_ids[2] == 0):
                 #     # [sidewalk, road]
@@ -1265,18 +1260,24 @@ class Fusion_GTA():
         fusion_ids = np.unique(fusion_trainid_0)
         # fusion_trainid_0: [h, w], fusion_color_0: [h, w, 3]
         # # 预测结果为road但是sam中和road对应的类别为sidewalk(分割成了同一个mask)，将预测结果改为road
+        # [road, sidewalk]
         mask_road = ((segmentation[:, :, 0] == 0) & (fusion_trainid_0 == 1))
-        # self.save_binary_mask('road before', mask_road)
-        # self.save_binary_mask('confidence_mask', confidence_mask)
         if confidence_mask is not None:
             mask_road = np.logical_and(mask_road, confidence_mask)
+        # self.save_binary_mask('road before', mask_road)
+        # self.save_binary_mask('confidence_mask', confidence_mask)
         # 预测结果为siwalk但是sam中和siwalk对应的类别为road(分割成了同一个mask)，将预测结果改为siwalk
+        # [sidewalk, road]
         mask_siwa = ((segmentation[:, :, 0] == 1) & (fusion_trainid_0 == 0))
         if confidence_mask is not None:
             mask_siwa = np.logical_and(mask_siwa, confidence_mask)
         # if entropy_mask is not None:
             # mask_siwa = np.logical_and(mask_siwa, entropy_mask)
-        mask_buil = ((segmentation[:, :, 0] == 2) & (fusion_trainid_0 == 10))
+        # [building, sky], [building, fence]
+        mask_buil = ((segmentation[:, :, 0] == 2) & (fusion_trainid_0 == 10))\
+                    | ((segmentation[:, :, 0] == 2) & (fusion_trainid_0 == 4))
+        if confidence_mask is not None:
+            mask_buil = np.logical_and(mask_buil, confidence_mask)
         # 预测结果为fence但是sam中和fence对应的类别为building(分割成了同一个mask)，将预测结果改为fence
         mask_fenc = ((segmentation[:, :, 0] == 4) & (fusion_trainid_0 == 2))
         # 预测结果为pole但是sam中和pole对应的类别为building/light/sign(分割成了同一个mask)，将预测结果改为pole
@@ -1291,6 +1292,11 @@ class Fusion_GTA():
         mask_sign = ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 2))\
                     | ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 8))
         mask_sign_2 = ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 5))  # [H, W]
+        # [vegetation, terrain]
+        mask_vege = ((segmentation[:, :, 0] == 8) & (fusion_trainid_0 == 9))\
+                    | ((segmentation[:, :, 0] == 8) & (fusion_trainid_0 == 2))
+        if confidence_mask is not None:
+            mask_vege = np.logical_and(mask_vege, confidence_mask)
         # 预测结果为car但是sam中和car对应的类别为vegetation(分割成了同一个mask)，将预测结果改为car
         mask_car = ((segmentation[:, :, 0] == 13) & (fusion_trainid_0 == 8))  # 
         mask_bike = (segmentation[:, :, 0] == 18)
@@ -1311,10 +1317,12 @@ class Fusion_GTA():
         # f0_road_mask = (fusion_trainid_0 == 0).astype(np.uint8)
         # if f0_road_mask.any() and not inside_rect(cal_center(f0_road_mask), self.road_center_rect):
         fusion_trainid_0[mask_siwa] = 1
+        fusion_trainid_0[mask_buil] = 2
         fusion_trainid_0[mask_fenc] = 4
         fusion_trainid_0[mask_pole] = 5
         fusion_trainid_0[mask_ligh] = 6
         fusion_trainid_0[mask_sign] = 7
+        fusion_trainid_0[mask_vege] = 8
         fusion_trainid_0[mask_person] = 11
         fusion_trainid_0[mask_car] = 13
         # print(fusion_ids)
