@@ -3,7 +3,18 @@ import argparse
 import pandas as pd
 from tqdm import tqdm
 
-def sort_csv_files(folder_path, column_name, index, save_path):
+def sort_csv_files(folder_path, column_name, index, save_path, sort_order=0):
+    '''
+    author: weihao
+    data: 7-**
+    func: 对文件夹下的所有.csv文件按照指定列进行排序
+    input:
+        folder_path: 文件夹路径
+        column_name: 需要排序的列名称
+        index: 需要排序的索引序号
+        save_path: 保存结果的路径
+        sort_order: 排序方式, 0:从小到大排序, 1:从大到小排序
+    '''
     # 获取文件夹下所有.csv文件的路径
     file_paths = [os.path.join(folder_path, file) for file in os.listdir(folder_path) if file.endswith('.csv')]
     file_paths.sort()  #从小到大进行排序
@@ -28,7 +39,10 @@ def sort_csv_files(folder_path, column_name, index, save_path):
         # 将DataFrame与结果DataFrame进行拼接
         result_df = pd.concat([result_df, df_data], ignore_index=True)
     # 根据数值列进行排序
-    result_df = result_df.sort_values(by='Value')
+    if sort_order == 0:  # 从小到大排序
+        result_df = result_df.sort_values(by='Value')  #　ascending=True,升序
+    elif sort_order == 1:  # 从大到小排序
+        result_df = result_df.sort_values(by='Value', ascending=False)  # ascending=False,降序
 
     # 保存排序结果为新的CSV文件
     result_df.to_csv(save_path, index=False)
@@ -37,12 +51,13 @@ def sort_csv_files(folder_path, column_name, index, save_path):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='CSV文件排序工具')
     parser.add_argument('--folder_path', type=str, help='文件夹路径', \
-                        default='/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/cityscapes/debug_acdc/ious')
-    parser.add_argument('--column_name', type=str, help='需要统计的列名称', default='Differ_1_0')
+                        default='/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/cityscapes/debug_gta2/ious')
+    parser.add_argument('--column_name', type=str, help='需要统计的列名称', default='Differ_3_0')
     parser.add_argument('--index', type=int, help='需要统计的索引序号', default=0)
     parser.add_argument('--save_path', type=str, help='保存结果的路径,输入为文件名', default='result.csv')
+    parser.add_argument('--order', type=int, default=0, help='0:从小到大排序, 1:从大到小排序')
     args = parser.parse_args()
     
     args.save_path = os.path.join(args.folder_path, '../', args.column_name + '_' + args.save_path)
 
-    sort_csv_files(args.folder_path, args.column_name, args.index, args.save_path)
+    sort_csv_files(args.folder_path, args.column_name, args.index, args.save_path, args.order)
