@@ -53,8 +53,11 @@ sam_classes = [5, 6, 7, 11, 12, 13, 14, 15, 16, 17, 18]  # 11 classes, 5, 6, 7,
 shrink_num = 2
 # 
 display_size = (350, 700)
-#
+# 
+sky_center_rect = (600, 110, 1580, 440)
 road_center_rect = (740, 780, 1645, 995)  # (740, 810, 1625, 995)
+# 
+daytime_threshold = 70
 # whether to save the mixed result
 save_mix_result = False
 save_all_fusion = True
@@ -63,5 +66,5 @@ save_all_fusion = True
 num_classes = 19
 
 # num of images to process
-debug_num = 10  # 2975 - 1648 = 1327
-begin_index = 0  # 0
+debug_num = 1550  # 2975 - 1648 = 1327
+begin_index = 50  # 0

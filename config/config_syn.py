@@ -63,5 +63,5 @@ save_all_fusion = True
 num_classes = 16
 
 # num of images to process
-debug_num = 1718 # 2975 - 1257 = 
-begin_index = 1257 # 0
+debug_num = 106 # 2975 - 106 = 869
+begin_index = 2869 # 0

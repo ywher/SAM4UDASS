@@ -793,13 +793,16 @@ class Fusion_SYN():
         bgr_image = np.array(fig.canvas.renderer._renderer)
         bgr_image = cv2.cvtColor(bgr_image, cv2.COLOR_RGB2BGR)
         
+        plt.clf()
+        plt.close(fig)
+        
         # 裁剪图像，去除边界
         gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
         _, thresh = cv2.threshold(gray_image, 1, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         x, y, w, h = cv2.boundingRect(contours[0])
         bgr_image = bgr_image[y:y+h, x:x+w]
-        plt.close(fig)
+        
         return bgr_image
 
     def visualize_numpy_higher_threshold(self, np_array, image, threshold=0.0):
@@ -1452,13 +1455,16 @@ class Fusion_GTA():
         bgr_image = np.array(fig.canvas.renderer._renderer)
         bgr_image = cv2.cvtColor(bgr_image, cv2.COLOR_RGB2BGR)
         
+        plt.clf()
+        plt.close(fig)
+        
         # 裁剪图像，去除边界
         gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
         _, thresh = cv2.threshold(gray_image, 1, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         x, y, w, h = cv2.boundingRect(contours[0])
         bgr_image = bgr_image[y:y+h, x:x+w]
-        plt.close(fig)
+        
         return bgr_image
 
     def visualize_numpy_higher_threshold(self, np_array, image, threshold=0.0):
@@ -1625,10 +1631,10 @@ class Fusion_GTA():
         
 class Fusion_ACDC():
     def __init__(self, mask_folder=None, segmentation_folder=None, confidence_folder=None, entropy_folder=None,
-                 image_folder=None, gt_folder=None, num_classes=None, road_center_rect=None,
+                 image_folder=None, gt_folder=None, num_classes=None, sky_center_rect=None, road_center_rect=None,
                  mix_ratio=None, resize_ratio=None, output_folder=None, mask_suffix=None,
                  segmentation_suffix=None, segmentation_suffix_noimg=None,
-                 confidence_suffix=None, entropy_suffix=None, gt_suffix=None,
+                 confidence_suffix=None, entropy_suffix=None, gt_suffix=None, daytime_threshold=100, 
                  fusion_mode=None, sam_classes=None, shrink_num=None, display_size=(200, 400)):
         # the path to the sam mask
         self.mask_folder = mask_folder
@@ -1642,6 +1648,8 @@ class Fusion_ACDC():
         self.entropy_suffix = entropy_suffix
         # the number of classes
         self.num_classes = num_classes
+        # the rect of the sky center
+        self.sky_center_rect = sky_center_rect
         # the rect of the road center
         self.road_center_rect = road_center_rect
         # the path to the ground truth folder
@@ -1661,6 +1669,8 @@ class Fusion_ACDC():
         self.segmentation_suffix_noimg = segmentation_suffix_noimg
         # the gt suffix
         self.gt_suffix = gt_suffix
+        # daytime threshold
+        self.daytime_threshold = daytime_threshold
         # the fusion mode
         self.fusion_mode = fusion_mode
         # the classes sam performs better
@@ -1677,6 +1687,7 @@ class Fusion_ACDC():
         # one folder corresponds to one image name without suffix
         self.image_names = os.listdir(self.mask_folder)  # GOPR0122_frame_000161_rgb_anon
         self.image_names.sort()
+        self.daytime = True
 
         # make the folder to save the fusion result
         # the fusion result in trainID
@@ -1704,6 +1715,7 @@ class Fusion_ACDC():
             print('the path is already exist')
 
     def get_sam_pred(self, image_name, segmentation, confidence_mask=None, entropy_mask=None):
+        # DEBUG(cxy):　严老师，我给你加了一个新的参数original_image，原来的代码会报错，我不知道这样加对不对，现在可以把原始图像也传进来了
         '''
         use the mask from sam and the prediction from uda
         output the trainid and color mask
@@ -1758,44 +1770,31 @@ class Fusion_ACDC():
                 elif num_ids[0] == 3 and num_ids[1] == 4 and counts[1] / counts[0] >= 0.25:
                     # [wall, fence]
                     most_freq_id = num_ids[1]
-                elif num_ids[0] == 8 and num_ids[1] == 9 and counts[1] / counts[0] >= 0.05:
-                    # [vegetation, terrain]
-                    most_freq_id = num_ids[1]
                 elif num_ids[0] == 9 and num_ids[1] == 1:
                     # [terrain, sidewalk]
                     num_id_0 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[0], mask[:, :, 0] == 255), entropy_mask))
                     num_id_1 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[1], mask[:, :, 0] == 255), entropy_mask))
                     if num_id_1 > num_id_0:
                         most_freq_id = num_ids[1]
-                # for synthia
-                elif num_ids[0] == 8 and num_ids[1] == 1:
-                    # [vegetation, sidewalk]
-                    num_id_0 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[0], mask[:, :, 0] == 255), entropy_mask))
-                    num_id_1 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[1], mask[:, :, 0] == 255), entropy_mask))
-                    if num_id_0 / counts[0] > 0.1 and self.num_classes == 19:
-                        most_freq_id = 9 #terrrain
-                    elif counts[1] / counts[0] >= 0.25:
-                        most_freq_id = num_ids[1]
-                elif num_ids[0] == 8 and num_ids[1] == 2:
-                    # [vegetation, building], 窗户被判断为vegetation
-                    num_id_0 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[0], 
-                                                    mask[:, :, 0] == 255), confidence_mask))
-                    num_id_1 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[1], 
-                                                    mask[:, :, 0] == 255), confidence_mask))
-                    if num_id_0 ==0 or num_id_1 / num_id_0 > 0.25:
-                        most_freq_id = num_ids[1]
+                # for acdc
                 elif num_ids[0] == 0 and num_ids[1] == 1:
                     # [road, sidewalk]
                     if index == 0:
                         most_freq_id = 0
-                    elif counts[1] / counts[0] >= 0.75:
+                    elif counts[1] / counts[0] >= 0.15:
                         most_freq_id = num_ids[1]
-                # elif (num_ids[0] == 1 and num_ids[1] == 0) or \
-                #     (len(counts) >= 3 and num_ids[0] == 1 and num_ids[2] == 0):
-                #     # [sidewalk, road]
-                #     mask_center = cal_center(mask[:, :, 0])
-                #     if inside_rect(mask_center, self.road_center_rect) or index == 0:
-                #         most_freq_id = 0
+                elif num_ids[0] == 0 and num_ids[1] == 10:
+                    # [road, sky]
+                    if counts[1] / counts[0] >= 0.25:
+                        most_freq_id = num_ids[1]
+                elif num_ids[0] == 1 and num_ids[1] == 3:
+                    # [sidewalk, wall]
+                    if counts[1] / counts[0] >= 0.4:
+                        most_freq_id = num_ids[1]
+            if num_ids[0] == 8 and not self.daytime:  #夜间的天空总是被识别成vegetation
+                mask_center = cal_center(mask[:, :, 0])
+                if inside_rect(mask_center, self.sky_center_rect):
+                    most_freq_id = 10
                     
             # fill the sam mask using the most frequent trainid in segmentation
             sam_mask[mask[:, :, 0] == 255] = most_freq_id  # 存在重叠的问题
@@ -2120,13 +2119,16 @@ class Fusion_ACDC():
         bgr_image = np.array(fig.canvas.renderer._renderer)
         bgr_image = cv2.cvtColor(bgr_image, cv2.COLOR_RGB2BGR)
         
+        plt.clf()
+        plt.close(fig)
+        
         # 裁剪图像，去除边界
         gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
         _, thresh = cv2.threshold(gray_image, 1, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         x, y, w, h = cv2.boundingRect(contours[0])
         bgr_image = bgr_image[y:y+h, x:x+w]
-        plt.close(fig)
+        
         return bgr_image
 
     def visualize_numpy_higher_threshold(self, np_array, image, threshold=0.0):
@@ -2291,6 +2293,19 @@ class Fusion_ACDC():
         mask = mask * 255
         cv2.imwrite(os.path.join(self.output_folder, image_name + self.mask_suffix), mask)
     
+    def is_daytime(self, image):
+        # 将图像转换为灰度图像
+        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        # 计算图像的平均亮度值
+        brightness = cv2.mean(gray_image)[0]
+
+        # 判断亮度值是否超过阈值
+        if brightness > self.daytime_threshold:
+            self.daytime = True  # 白天
+        else:
+            self.daytime = False # 黑夜
+        
 def main():
     args = get_parse()
     fusion = Fusion(args)

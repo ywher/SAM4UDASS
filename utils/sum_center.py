@@ -47,23 +47,34 @@ def visualize_statistics(centers, statistics_array):
     plt.show()
 
 if __name__ == '__main__':
+    # 输入真值路径, 和想要统计的类别ID, 注意修改命名
+    # cityscapes
     # label_folder = "/media/ywh/1/yanweihao/dataset/cityscapes_original/gtFine_trainvaltest/gtFine/train_all"  # 替换为您的数据集标签图像文件夹路径
-    # label_id = 0  # 替换为您需要统计的类别标签ID
+    # label_id = 0  # 替换为您需要统计的类别标签I
+    # acdc
+    # label_folder = "/media/ywh/1/yanweihao/projects/uda/DAFormer/data/acdc/gt/train"
+    # label_id = 10
     # centers, statistics_array = calculate_centers_and_rectangles(label_folder, label_id)
-    # np.save('centers.npy', statistics_array)
+    # np.save('sky_centers.npy', statistics_array)
     # visualize_statistics(centers, statistics_array)
     
-    # file_name = 'centers.npy'
+    # file_name = 'acdc_sky_centers.npy'
     # center_npt = np.load(file_name)
-    # plt.imshow(center_npt, cmap='gray')
-    # plt.savefig('centers.png', dpi=300, bbox_inches='tight')
+    # # 归一化到0-255范围
+    # normalized_array = (center_npt - np.min(center_npt)) * 255 / (np.max(center_npt) - np.min(center_npt))
+    # normalized_array = normalized_array.astype(np.uint8)
+
+    # # 可视化统计结果
+    # plt.imshow(normalized_array, cmap='gray')
+    # plt.axis('off')
+    # plt.savefig('statistics_visualization.png', dpi=500, bbox_inches='tight', pad_inches=0.0)
     # plt.show()
     
     # import numpy as np
     # import matplotlib.pyplot as plt
 
     # 加载.npy文件
-    array = np.load('centers.npy')
+    array = np.load('acdc_sky_centers.npy')
     indices = np.nonzero(array)
 
     # 提取最小和最大的非零位置坐标
@@ -72,14 +83,3 @@ if __name__ == '__main__':
     
     bounding_box = np.array([[min_x, min_y], [max_x, min_y], [max_x, max_y], [min_x, max_y]])
     print(bounding_box)
-    
-    
-    # # 归一化到0-255范围
-    # normalized_array = (statistics_array - np.min(statistics_array)) * 255 / (np.max(statistics_array) - np.min(statistics_array))
-    # normalized_array = normalized_array.astype(np.uint8)
-
-    # # 可视化统计结果
-    # plt.imshow(normalized_array, cmap='gray')
-    # plt.axis('off')
-    # plt.savefig('statistics_visualization.png', dpi=500, bbox_inches='tight', pad_inches=0.0)
-    # plt.show()
