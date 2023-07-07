@@ -25,7 +25,7 @@ gt_folder = '/media/ywh/1/yanweihao/dataset/cityscapes_original/gtFine_trainvalt
 # 
 mix_ratio = 0.5
 # 
-resize_ratio = 0.5
+resize_ratio = 1
 # 
 output_folder = 'outputs/cityscapes/debug_gta2' #这是去掉了mask按照名称排序的过程
 # 
@@ -56,12 +56,12 @@ display_size = (350, 700)
 #
 road_center_rect = (740, 780, 1645, 995)  # (740, 810, 1625, 995)
 # whether to save the mixed result
-save_mix_result = False
+save_mix_result = True
 save_all_fusion = True
 
 #num of classes, 16 for synthia, 19 for gta5
 num_classes = 19
 
 # num of images to process
-debug_num = 10 # 2975 - 1648 = 1327
-begin_index = 2965 # 0
+debug_num = 2975 # 2975 - 1648 = 1327
+begin_index = 0 # 0
