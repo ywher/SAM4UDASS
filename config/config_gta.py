@@ -7,9 +7,14 @@ mask_folder = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/out
 # segmentation_root = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs'
 
 #pred folder for gta
-segmentation_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs/local-exp7/gta/230522_2312_gta2cs_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_ea659/trainid'
-confidence_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs/local-exp7/gta/230522_2312_gta2cs_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_ea659/confidence'
-entropy_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs/local-exp7/gta/230522_2312_gta2cs_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_ea659/entropy'
+# segmentation_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs/local-exp7/gta/230522_2312_gta2cs_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_ea659/trainid'
+# confidence_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs/local-exp7/gta/230522_2312_gta2cs_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_ea659/confidence'
+# entropy_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs/local-exp7/gta/230522_2312_gta2cs_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_ea659/entropy'
+
+#sepico pred entro and confidence folder for gta 
+segmentation_folder = '/media/ywh/1/yanweihao/projects/uda/SePiCo/work_dirs/local-exp1/230707_0324_dlv2_proj_r101v1c_sepico_DistCL-reg-w1.0-start-iter3000-tau100.0-l3-w1.0_rcs0.01_cpl_self_adamw_6e-05_pmT_poly10warm_1x2_40k_gta2cs_seed76_36629/pred_trainid'
+confidence_folder = '/media/ywh/1/yanweihao/projects/uda/SePiCo/work_dirs/local-exp1/230707_0324_dlv2_proj_r101v1c_sepico_DistCL-reg-w1.0-start-iter3000-tau100.0-l3-w1.0_rcs0.01_cpl_self_adamw_6e-05_pmT_poly10warm_1x2_40k_gta2cs_seed76_36629/pred_confidence'
+entropy_folder = '/media/ywh/1/yanweihao/projects/uda/SePiCo/work_dirs/local-exp1/230707_0324_dlv2_proj_r101v1c_sepico_DistCL-reg-w1.0-start-iter3000-tau100.0-l3-w1.0_rcs0.01_cpl_self_adamw_6e-05_pmT_poly10warm_1x2_40k_gta2cs_seed76_36629/pred_entropy'
 
 #pred folder for synthia
 # segmentation_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs/local-exp7/syn/230526_1633_syn2cs_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_103e3/pred_trainid_new'
@@ -27,7 +32,7 @@ mix_ratio = 0.5
 # 
 resize_ratio = 1
 # 
-output_folder = 'outputs/cityscapes/debug_gta2' #这是去掉了mask按照名称排序的过程
+output_folder = 'outputs/cityscapes/sepico_gta' #这是去掉了mask按照名称排序的过程
 # 
 mask_suffix = '.png'
 # 
@@ -56,12 +61,12 @@ display_size = (350, 700)
 #
 road_center_rect = (740, 780, 1645, 995)  # (740, 810, 1625, 995)
 # whether to save the mixed result
-save_mix_result = True
+save_mix_result = False
 save_all_fusion = True
 
 #num of classes, 16 for synthia, 19 for gta5
 num_classes = 19
 
 # num of images to process
-debug_num = 2975 # 2975 - 1648 = 1327
-begin_index = 0 # 0
+debug_num = 2965 # 2975 - 1648 = 1327
+begin_index = 10 # 0
