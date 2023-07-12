@@ -1,3 +1,9 @@
+'''
+func:对制定文件夹中的二值掩膜按照前景像素数目进行排序,面积大小从大到小
+autor: yanweihao
+data: 2023/7/1
+'''
+
 import os
 import cv2
 import json
@@ -18,14 +24,15 @@ def sort_masks(folder_path):
 
         if not os.path.isdir(folder_dir):
             continue
-        if not os.path.exists(tmp_folder_dir):
-            os.makedirs(tmp_folder_dir)
+
+        # Create the temporary folder if it doesn't exist
+        os.makedirs(tmp_folder_dir, exist_ok=True)
 
         mask_list = []
         for file_name in os.listdir(folder_dir):
             file_path = os.path.join(folder_dir, file_name)
             if not os.path.isfile(file_path) or not file_name.endswith('.png'):
-                continue  # meta.csv
+                continue  # Skip files that are not PNG images
 
             mask = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
             foreground_pixels = cv2.countNonZero(mask)
@@ -44,8 +51,9 @@ def sort_masks(folder_path):
             folder_dict[folder_name][original_name] = new_file_name
 
         csv_path = os.path.join(folder_dir, 'metadata.csv')
-        shutil.move(csv_path, tmp_folder_dir + '/metadata.csv')
-        # remove original folder and rename tmp folder to original folder
+        shutil.move(csv_path, os.path.join(tmp_folder_dir, 'metadata.csv'))
+
+        # Remove the original folder and rename the temporary folder to the original folder name
         shutil.rmtree(folder_dir)
         shutil.move(tmp_folder_dir, folder_dir)
 
@@ -53,11 +61,11 @@ def sort_masks(folder_path):
 
 
 if __name__ == '__main__':
-    # 示例用法
+    # Example usage
     folder_path = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/ACDC/train2'
     mapping_dict = sort_masks(folder_path)
 
-    # 将映射关系保存到 JSON 文件
+    # Save the mapping dictionary to a JSON file
     output_file = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/ACDC/mapping_train2.json'
     with open(output_file, 'w') as f:
         json.dump(mapping_dict, f, indent=2)

@@ -1,131 +1,16 @@
 import os
 import cv2
 import pandas as pd
-from matplotlib import pyplot as plt
 import numpy as np
-from config import config_sam as config
+from config import config_sam_syn as config
 from cityscapesscripts.helpers.labels import trainId2label as trainid2label
-from segment_anything import sam_model_registry, SamAutomaticMaskGenerator, SamPredictor
+from segment_anything import sam_model_registry, SamPredictor  # SamAutomaticMaskGenerator, SamPredictor
 import tqdm
 import copy
+from natsort import natsorted
 from tools.iou_perimg import SegmentationMetrics
+from utils.segmentix import Segmentix
 
-class Segmentix():
-    def __init__(self):
-        pass 
-      
-    def resize_mask(
-        self, ref_mask: np.ndarray, longest_side: int = 256
-    ) :
-        """
-        Resize an image to have its longest side equal to the specified value.
-
-        Args:
-            ref_mask (np.ndarray): The image to be resized.
-            longest_side (int, optional): The length of the longest side after resizing. Default is 256.
-
-        Returns:
-            tuple[np.ndarray, int, int]: The resized image and its new height and width.
-        """
-        height, width = ref_mask.shape[:2]
-        if height > width:
-            new_height = longest_side
-            new_width = int(width * (new_height / height))
-        else:
-            new_width = longest_side
-            new_height = int(height * (new_width / width))
-
-        return (
-            cv2.resize(
-                ref_mask, (new_width, new_height), interpolation=cv2.INTER_NEAREST
-            ),
-            new_height,
-            new_width,
-        )
-
-    def pad_mask(
-        self,
-        ref_mask: np.ndarray,
-        new_height: int,
-        new_width: int,
-        pad_all_sides: bool = False,
-    ) -> np.ndarray:
-        """
-        Add padding to an image to make it square.
-
-        Args:
-            ref_mask (np.ndarray): The image to be padded.
-            new_height (int): The height of the image after resizing.
-            new_width (int): The width of the image after resizing.
-            pad_all_sides (bool, optional): Whether to pad all sides of the image equally. If False, padding will be added to the bottom and right sides. Default is False.
-
-        Returns:
-            np.ndarray: The padded image.
-        """
-        pad_height = 256 - new_height
-        pad_width = 256 - new_width
-        if pad_all_sides:
-            padding = (
-                (pad_height // 2, pad_height - pad_height // 2),
-                (pad_width // 2, pad_width - pad_width // 2),
-            )
-        else:
-            padding = ((0, pad_height), (0, pad_width))
-        
-        # Padding value defaults to '0' when the `np.pad`` mode is set to 'constant'.
-        return np.pad(ref_mask, padding, mode="constant")
-    
-    def reference_to_sam_mask(
-        self, ref_mask: np.ndarray, pad_all_sides: bool = False
-    ) -> np.ndarray:
-        """
-        Convert a grayscale mask to a binary mask, resize it to have its longest side equal to 256, and add padding to make it square.
-
-        Args:
-            ref_mask (np.ndarray): The grayscale mask to be processed.
-            threshold (int, optional): The threshold value for the binarization. Default is 127.
-            pad_all_sides (bool, optional): Whether to pad all sides of the image equally. If False, padding will be added to the bottom and right sides. Default is False.
-
-        Returns:
-            np.ndarray: The processed binary mask.
-        """
-
-        # Convert a grayscale mask to a binary mask.
-        # Values over the threshold are set to 1, values below are set to -1.
-        # ref_mask = np.clip((ref_mask > threshold) * 2 - 1, -1, 1)
-
-        # Resize to have the longest side 256.
-        resized_mask, new_height, new_width = self.resize_mask(ref_mask)
-
-        # Add padding to make it square.
-        square_mask = self.pad_mask(resized_mask, new_height, new_width, pad_all_sides)
-        
-        # Turn to logits mask input
-        logits_mask = np.log((square_mask + 1e-16)/ (1-square_mask+1e-16))
-
-        # Expand SAM mask's dimensions to 1xHxW (1x256x256).
-
-        return np.expand_dims(logits_mask, axis=0)
-    
-    def turn_logits_to_possibility(self, logits, original_shape):
-        # turn logits to 0-1
-        logits = np.clip(logits, 36, -100)
-        poss = np.exp(logits) / (np.exp(logits) + 1)
-        height, width = original_shape
-
-        # find the resize region scale
-        longest_side = 256
-        if height > width:
-            new_height = longest_side
-            new_width = int(width * (new_height / height))
-        else:
-            new_width = longest_side
-            new_height = int(height * (new_width / width))
-        
-        # clip the region and resize to original size
-        corres_region = poss[:new_height, : new_width][0]
-        original_possibility = cv2.resize(corres_region, dsize = original_shape)
-        return original_possibility
 
 class SAM_FUSION():
     def __init__(self, mask_folder=None, segmentation_folder=None, confidence_folder=None, entropy_folder=None,
@@ -239,8 +124,10 @@ class SAM_FUSION():
             return color_mask      
 
     def mask_merge_by_stability(self, prompt_masks, scores):
-        """ prompt_masks : dict{mask_id : np.array}
-            score : dict{mask_id : float}
+        """
+        func: merge the masks by the stability, one pixel may belong to many masks
+        prompt_masks : dict{mask_id : np.array}
+        score : dict{mask_id : float}
         """
         merged_mask = (np.zeros_like(list(prompt_masks.values())[0]) + 1000)
         score_map = np.zeros_like(merged_mask, dtype=float)
@@ -252,7 +139,7 @@ class SAM_FUSION():
             # print(f"mask id is {class_names[mask_id]}, mask score is {scores[mask_id]}")
 
         return merged_mask, score_map
-    
+
     def mask_merge(self, prompt_masks, scores, possibilities):
         """ prompt_masks : dict{mask_id : np.array}
             score : dict{mask_id : float}
@@ -269,7 +156,8 @@ class SAM_FUSION():
 
         # import pdb;pdb.set_trace()
 
-        # fill the blank region
+        # fill the blank region, still some problem,
+        # the gap between wall and car cannot be sidewalk
         blank_region = (np.zeros_like(list(prompt_masks.values())[0]) + 255)
 
         for mask_id in possibilities:
@@ -282,7 +170,8 @@ class SAM_FUSION():
         merged_mask[merged_mask == 255] = blank_region[merged_mask == 255]
         return merged_mask
     
-    def get_prompt_point(self, bin_mask_image): 
+    def get_prompt_point(self, bin_mask_image):
+        # 给uda中每个类别的mask, 对每个联通区域计算它们的单个质心作为点的prompt
         # 进行连通区域提取
         connectivity = 8  # 连通性，4代表4连通，8代表8连通
         output = cv2.connectedComponentsWithStats(bin_mask_image, connectivity, cv2.CV_32S)
@@ -329,6 +218,7 @@ class SAM_FUSION():
 
     def generate_segementation_by_sam(self, image, autogenerator_mask, uda_mask):
         """
+        func: generate pseudo label for sam by referring to uda_mask
             image : np.array
             autogenrator_mask : np.array, uint8
             uda_mask : np.array, uint8
@@ -339,6 +229,7 @@ class SAM_FUSION():
         sam_mask_result = np.zeros_like(autogenerator_mask).astype(np.uint8) + 255
 
         # Give auto generated mask corresponding semantic label
+        # can update to the get_sam_pred function in result_fusion.py
         for submask_id in np.unique(autogenerator_mask):
             if submask_id == 1000:
                 break
@@ -359,7 +250,7 @@ class SAM_FUSION():
             prompt_mask = np.zeros_like(uda_mask, dtype = float)
 
             # Give uda mask lower possibility and give sam mask higher possibility 
-            if np.sum(sam_mask_result == semantic_id):    
+            if np.sum(sam_mask_result == semantic_id):  # 这两个系数可以调节, 最好是有可视化的效果
                 prompt_mask[uda_mask == semantic_id] = 0.6
                 prompt_mask[sam_mask_result == semantic_id] = 1
             else:
@@ -380,6 +271,7 @@ class SAM_FUSION():
         for semantic_id in mask_point_prompts:
             # print(bin_mask_id, np.max(bin_masks[bin_mask_id]))
             pos = mask_point_prompts[semantic_id]["points"]
+            # other id's points as negative prompts
             neg = []
             for other_semantic_id in mask_point_prompts:
                 if semantic_id != other_semantic_id:
@@ -392,8 +284,9 @@ class SAM_FUSION():
                 multimask_output=False,
                 )
 
-            score_result[semantic_id] = score[0]
-            mask_result[semantic_id] = mask[0]
+            score_result[semantic_id] = score[0]  # stability score, only one value, like confidence score
+            mask_result[semantic_id] = mask[0]  # 
+            # possibility_result shape is [H, W]
             possibility_result[semantic_id] = self.segmtrix.turn_logits_to_possibility(logit, (image.shape[1], image.shape[0]))
 
         merged_mask = self.mask_merge(mask_result, score_result, possibility_result)
@@ -460,7 +353,7 @@ class SAM_FUSION():
         # save the miou and class ious
         data.to_csv(os.path.join(self.output_folder, 'ious', image_name + '.csv'), index=False)
 
-    def display_images_horizontally(self, images, image_name, mious, thresholds):
+    def dis_imgs_horizontal(self, images, image_name, mious, thresholds):
         '''
         function:
             display the images horizontally and save the result
@@ -546,37 +439,37 @@ class SAM_FUSION():
     def fusion(self):
         bar = tqdm.tqdm(total=len(self.image_names))
         for image_name in self.image_names:
-            #get the segmentation result
+            # get the segmentation result
             if self.segmentation_suffix_noimg:
                 prediction_path = os.path.join(self.segmentation_folder, image_name.replace('_leftImg8bit', '') + self.segmentation_suffix)
             else:
-                prediction_path = os.path.join(self.segmentation_folder, image_name+ self.segmentation_suffix)
+                prediction_path = os.path.join(self.segmentation_folder, image_name + self.segmentation_suffix)
             # import pdb; pdb.set_trace()
             # print('load from: ', prediction_path)
-            uda_mask = cv2.imread(prediction_path, 0) #[h, w, 3], 3 channels not 1 channel
+            uda_mask = cv2.imread(prediction_path, 0)  # [h, w, 3], 3 channels not 1 channel
             # import pdb; pdb.set_trace()
             uda_color = self.color_segmentation(uda_mask)
-            
+
             # get the ground truth
             gt_path = os.path.join(self.gt_folder, \
                 image_name.replace('_leftImg8bit', '') + self.gt_suffix)
-            gt = cv2.imread(gt_path, 0) #[h, w, 3]
+            gt = cv2.imread(gt_path, 0)  # [h, w, 3]
             gt_color = self.color_segmentation(gt)
             # print(np.unique(gt))
-                    
+
             # get the original image
             original_image = cv2.imread(os.path.join(self.image_folder, image_name + self.mask_suffix))
 
             # get the mask names
             mask_names = [name for name in os.listdir(os.path.join(self.mask_folder, image_name)) if self.mask_suffix in name]
-            
-            # sort the mask names accrording to the mask area from large to small, can offline
+            mask_names = natsorted(mask_names)  # order the mask names according to the id, from big to small
+
             autogenerator_masks = {}
             masks_stability_score = {}
             meta_data = pd.read_csv(os.path.join(self.mask_folder, image_name,"metadata.csv"))  
 
             blank_region = np.zeros((original_image.shape[0], original_image.shape[1]))
-            
+
             for i, mask_name in enumerate(mask_names):
                 mask_path = os.path.join(self.mask_folder, image_name, mask_name)
                 mask = cv2.imread(mask_path, 0)  # [h,w,3]
@@ -608,8 +501,8 @@ class SAM_FUSION():
             error_0 = self.get_error_image(uda_mask, gt, uda_color)
             error_1 = self.get_error_image(fused_result, gt, fusion_color_bg)
 
-            # fusion.display_images_horizontally([gt_color, sam_color, pred_color, fusion_color_bg_0], '{}_fusion0'.format(image_name.replace('_leftImg8bit', '')), miou_0)
-            self.display_images_horizontally(
+            # fusion.dis_imgs_horizontal([gt_color, sam_color, pred_color, fusion_color_bg_0], '{}_fusion0'.format(image_name.replace('_leftImg8bit', '')), miou_0)
+            self.dis_imgs_horizontal(
                 [original_image, gt_color, sam_color, uda_color, error_0, \
                 fusion_color_bg, fusion_color_bg, fusion_color_bg, fusion_color_bg, fusion_color_bg, \
                 error_1, error_1, error_1, error_1, error_1, \

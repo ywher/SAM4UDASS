@@ -135,10 +135,10 @@ if __name__ == '__main__':
         pred_entropy = pred_entropy.astype(np.float32)
         confidence_map = fusion.visualize_numpy(pred_confidence)
         entropy_map = fusion.visualize_numpy(pred_entropy)
-        confidence_mask, confidence_img = fusion.visualize_numpy_higher_threshold(pred_confidence, 
+        confidence_mask, confidence_img = fusion.vis_np_higher_thres(pred_confidence, 
                                                                 original_image, confidence_threshold)
         entropy_threshold = np.percentile(pred_entropy, entropy_ratio)
-        entropy_mask, entropy_img = fusion.visualize_numpy_lower_threshold(pred_entropy, 
+        entropy_mask, entropy_img = fusion.vis_np_lower_thres(pred_entropy, 
                                                             original_image, entropy_threshold)
 
         #get the sam segmentation result using the mask
@@ -211,8 +211,8 @@ if __name__ == '__main__':
         error_4 = fusion.get_error_image(fusion_trainid_bg_4, gt[:,:,0], fusion_color_bg_4)
         error_5 = fusion.get_error_image(fusion_trainid_bg_5, gt[:,:,0], fusion_color_bg_5)
         
-        # fusion.display_images_horizontally([gt_color, sam_color, pred_color, fusion_color_bg_0], '{}_fusion0'.format(image_name.replace('_leftImg8bit', '')), miou_0)
-        fusion.display_images_horizontally(
+        # fusion.dis_imgs_horizontal([gt_color, sam_color, pred_color, fusion_color_bg_0], '{}_fusion0'.format(image_name.replace('_leftImg8bit', '')), miou_0)
+        fusion.dis_imgs_horizontal(
             [original_image, gt_color, sam_color, pred_color, error_0, \
             fusion_color_bg_1, fusion_color_bg_2, fusion_color_bg_3, fusion_color_bg_4, fusion_color_bg_5, \
             error_1, error_2, error_3, error_4, error_5, \

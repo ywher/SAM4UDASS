@@ -22,12 +22,16 @@ image_folder = '/media/ywh/1/yanweihao/dataset/cityscapes_original/gtFine_trainv
 # the path to the ground truth
 gt_folder = '/media/ywh/1/yanweihao/dataset/cityscapes_original/gtFine_trainvaltest/gtFine/train_all'
 
+#
+sam_model_type = 'vit_h'
+sam_model_path = './models/sam_vit_h_4b8939.pth'
+device = 'cuda:1'
 # 
 mix_ratio = 0.5
 # 
 resize_ratio = 0.5
 # 
-output_folder = 'outputs/cityscapes/debug_syn_tmp' #这是去掉了mask按照名称排序的过程
+output_folder = 'outputs/cityscapes/debug_syn2' #这是去掉了mask按照名称排序的过程
 # 
 mask_suffix = '.png'
 # 
@@ -63,5 +67,5 @@ save_all_fusion = True
 num_classes = 16
 
 # num of images to process
-debug_num = 106 # 2975 - 106 = 869
-begin_index = 2869 # 0
+debug_num = 20 # 2975 - 106 = 869
+begin_index = 0 # 0
