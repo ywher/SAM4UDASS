@@ -763,7 +763,7 @@ class Fusion_SYN():
             if not os.path.exists(f4_output_folder):
                 os.makedirs(f4_output_folder, exist_ok=True)
             if not os.path.exists(f5_output_folder):
-                os.makedirs(f5_output_folder, exist_ok=True)    
+                os.makedirs(f5_output_folder, exist_ok=True)
 
         bar = tqdm.tqdm(total=config.debug_num)
         for i in index_range:
@@ -989,7 +989,7 @@ class Fusion_SYN():
 
         # 预测结果为person但是sam中和person对应的类别为building(分割成了同一个mask)，将预测结果改为person
         mask_person = ((segmentation == 11) & (fusion_trainid_0 == 2))\
-            
+
         # fusion_trainid_0[mask_road] = 0
         f0_road_mask = (fusion_trainid_0 == 0).astype(np.uint8)
         if f0_road_mask.any() and not inside_rect(cal_center(f0_road_mask), self.road_center_rect):
@@ -1243,7 +1243,7 @@ class Fusion_SYN():
         # cv2.waitKey(100)
         # cv2.destroyAllWindows()
 
-    def save_ious(self, miou_0, ious_0, miou_1, ious_1, miou_2, ious_2, miou_3, ious_3, 
+    def save_ious(self, miou_0, ious_0, miou_1, ious_1, miou_2, ious_2, miou_3, ious_3,
                   miou_4, ious_4, miou_5, ious_5, image_name):
         miou_diff_1_0 = round((miou_1 - miou_0) * 100, 2)
         miou_diff_2_0 = round((miou_2 - miou_0) * 100, 2)
