@@ -51,7 +51,7 @@ def sort_csv_files(folder_path, column_name, index, save_path, sort_order=0):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='CSV文件排序工具')
     parser.add_argument('--folder_path', type=str, help='文件夹路径', \
-                        default='/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/cityscapes/debug_gta2/ious')
+                        default='/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/cityscapes/mic_gta/ious')
     parser.add_argument('--column_name', type=str, help='需要统计的列名称', default='Differ_3_0')
     parser.add_argument('--index', type=int, help='需要统计的索引序号', default=0)
     parser.add_argument('--save_path', type=str, help='保存结果的路径,输入为文件名', default='result.csv')

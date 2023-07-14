@@ -1605,7 +1605,8 @@ class Fusion_GTA():
         # self.save_binary_mask('confidence_mask', confidence_mask)
         # 预测结果为siwalk但是sam中和siwalk对应的类别为road(分割成了同一个mask)，将预测结果改为siwalk
         # [sidewalk, road]
-        mask_siwa = ((segmentation[:, :, 0] == 1) & (fusion_trainid_0 == 0))
+        mask_siwa = ((segmentation[:, :, 0] == 1) & (fusion_trainid_0 == 0)) \
+                    | ((segmentation[:, :, 0] == 1) & (fusion_trainid_0 == 9))
         if confidence_mask is not None:
             mask_siwa = np.logical_and(mask_siwa, confidence_mask)
         # if entropy_mask is not None:
@@ -1615,8 +1616,12 @@ class Fusion_GTA():
                     | ((segmentation[:, :, 0] == 2) & (fusion_trainid_0 == 4))
         if confidence_mask is not None:
             mask_buil = np.logical_and(mask_buil, confidence_mask)
-        # 预测结果为fence但是sam中和fence对应的类别为building(分割成了同一个mask)，将预测结果改为fence
-        mask_fenc = ((segmentation[:, :, 0] == 4) & (fusion_trainid_0 == 2))
+        # fence, [building, vegetation]
+        mask_wall = (segmentation[:, :, 0] == 3) & (fusion_trainid_0 == 8)
+        if confidence_mask is not None:
+            mask_wall = np.logical_and(mask_wall, confidence_mask)
+        mask_fenc = ((segmentation[:, :, 0] == 4) & (fusion_trainid_0 == 2))\
+                    | ((segmentation[:, :, 0] == 4) & (fusion_trainid_0 == 8))
         # 预测结果为pole但是sam中和pole对应的类别为building/light/sign(分割成了同一个mask)，将预测结果改为pole
         mask_pole = ((segmentation[:, :, 0] == 5) & (fusion_trainid_0 == 2))\
                     | ((segmentation[:, :, 0] == 5) & (fusion_trainid_0 == 6))\
@@ -1625,9 +1630,10 @@ class Fusion_GTA():
         mask_ligh = ((segmentation[:, :, 0] == 6) & (fusion_trainid_0 == 2)) \
                     | ((segmentation[:, :, 0] == 6) & (fusion_trainid_0 == 5)) \
                     | ((segmentation[:, :, 0] == 6) & (fusion_trainid_0 == 8))
-        # 预测结果为sign但是sam中和sign对应的类别为building/vegetation(分割成了同一个mask)，将预测结果改为sign
+        # traffic sign, [building, vegetation, traffic light]
         mask_sign = ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 2))\
-                    | ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 8))
+                    | ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 8))\
+                    | ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 6))
         mask_sign_2 = ((segmentation[:, :, 0] == 7) & (fusion_trainid_0 == 5))  # [H, W]
         # [vegetation, terrain]
         mask_vege = ((segmentation[:, :, 0] == 8) & (fusion_trainid_0 == 9))\
@@ -1655,6 +1661,7 @@ class Fusion_GTA():
         # if f0_road_mask.any() and not inside_rect(cal_center(f0_road_mask), self.road_center_rect):
         fusion_trainid_0[mask_siwa] = 1
         fusion_trainid_0[mask_buil] = 2
+        fusion_trainid_0[mask_wall] = 3
         fusion_trainid_0[mask_fenc] = 4
         fusion_trainid_0[mask_pole] = 5
         fusion_trainid_0[mask_ligh] = 6
@@ -1691,8 +1698,11 @@ class Fusion_GTA():
             fusion_trainid = copy.deepcopy(fusion_trainid)
         road_mask = (segmentation[:, :, 0] == 0) & (fusion_trainid == 1) & confidence_mask
         side_mask = (segmentation[:, :, 0] == 1) & (fusion_trainid == 0) & confidence_mask
+        buil_mask = (segmentation[:, :, 0] == 2) & (fusion_trainid == 7) & confidence_mask
         fusion_trainid[road_mask] = 0  # road
         fusion_trainid[side_mask] = 1  # sidewalk
+        # newly added
+        fusion_trainid[buil_mask] = 2  # building
         fusion_color = self.color_segmentation(fusion_trainid)
         
         return fusion_trainid, fusion_color
@@ -1720,12 +1730,16 @@ class Fusion_GTA():
         road_mask = (segmentation[:, :, 0] == 0) & (fusion_trainid == 1) & entropy_mask
         # [sidewalk, road]
         side_mask = (segmentation[:, :, 0] == 1) & (fusion_trainid == 0) & entropy_mask
+        # [building, traffic sign]
+        buil_mask = (segmentation[:, :, 0] == 2) & (fusion_trainid == 7) & entropy_mask
         # [vegetation, sidewalk]
         vege_mask = (segmentation[:, :, 0] == 8) & (fusion_trainid == 1) & entropy_mask
         
         fusion_trainid[road_mask] = 0
         fusion_trainid[side_mask] = 1
-        fusion_trainid[vege_mask] = 8
+        # newly added
+        fusion_trainid[buil_mask] = 2  # building
+        fusion_trainid[vege_mask] = 8  # 
         fusion_color = self.color_segmentation(fusion_trainid)
         
         return fusion_trainid, fusion_color
