@@ -6,10 +6,15 @@ mask_folder = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/out
 # the path to the model prediction
 # segmentation_root = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs'
 
-#pred folder for gta
-segmentation_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs/local-exp8/230527_0645_cs2acdc_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_f753f/trainid'
-confidence_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs/local-exp8/230527_0645_cs2acdc_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_f753f/confidence'
-entropy_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs/local-exp8/230527_0645_cs2acdc_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_f753f/entropy'
+# pred folder for gta daformer
+# segmentation_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs/local-exp8/230527_0645_cs2acdc_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_f753f/trainid'
+# confidence_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs/local-exp8/230527_0645_cs2acdc_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_f753f/confidence'
+# entropy_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs/local-exp8/230527_0645_cs2acdc_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_f753f/entropy'
+
+# pred folder for mic gta
+segmentation_folder = '/media/ywh/1/yanweihao/projects/uda/MIC/seg/work_dirs/local-exp80/230713_0405_csHR2acdcHR_1024x1024_dacs_a999_fdthings_rcs001-20_m64-07-sep_hrda1-512-01_daformer_sepaspp_sl_mitb5_poly10warm_s0_0b9fc/pred_trainid'
+confidence_folder = '/media/ywh/1/yanweihao/projects/uda/MIC/seg/work_dirs/local-exp80/230713_0405_csHR2acdcHR_1024x1024_dacs_a999_fdthings_rcs001-20_m64-07-sep_hrda1-512-01_daformer_sepaspp_sl_mitb5_poly10warm_s0_0b9fc/pred_confidence'
+entropy_folder = '/media/ywh/1/yanweihao/projects/uda/MIC/seg/work_dirs/local-exp80/230713_0405_csHR2acdcHR_1024x1024_dacs_a999_fdthings_rcs001-20_m64-07-sep_hrda1-512-01_daformer_sepaspp_sl_mitb5_poly10warm_s0_0b9fc/pred_entropy'
 
 #pred folder for synthia
 # segmentation_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs/local-exp7/syn/230526_1633_syn2cs_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_103e3/pred_trainid_new'
@@ -22,15 +27,15 @@ image_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/data/acdc/rgb_anon/
 # the path to the ground truth
 gt_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/data/acdc/gt/train'
 
-# 
+#
 mix_ratio = 0.5
-# 
+#
 resize_ratio = 0.5
-# 
-output_folder = 'outputs/cityscapes/debug_acdc' #这是去掉了mask按照名称排序的过程
-# 
+#
+output_folder = 'outputs/cityscapes/mic_acdc' # 这是去掉了mask按照名称排序的过程
+#
 mask_suffix = '.png'
-# 
+#
 # segmentation_suffix = '_gtFine_labelTrainIds.png'
 # segmentation_suffix = '_leftImg8bittrainID.png'
 segmentation_suffix = 'trainID.png'
@@ -39,8 +44,8 @@ segmentation_suffix_noimg=True
 #
 confidence_suffix = '_confi.npy'
 entropy_suffix = '_entro.npy'
-confidence_threshold = 0.99  # absolute value
-entropy_ratio = 60  # relative value, lowest 70% entropy
+confidence_threshold = 0.95  # absolute value 0.99
+entropy_ratio = 80  # relative value, lowest 70% entropy 60
 #
 gt_suffix = '_gt_labelTrainIds.png'
 
@@ -66,5 +71,5 @@ save_all_fusion = True
 num_classes = 19
 
 # num of images to process
-debug_num = 1550  # 2975 - 1648 = 1327
-begin_index = 50  # 0
+debug_num = 1600  # 2975 - 1648 = 1327
+begin_index = 0  # 0
