@@ -2,7 +2,7 @@
 # define the folder path and parameters
 # train2 is the folder of the generated mask, preciser
 # train is the folder of the generated mask, default sam params
-mask_folder = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/cityscapes/train2'
+dino_folder = '/media/ywh/1/XAC_Learning/projects/Grounded-Segment-Anything/Gray_outputs_train_all'
 
 # the path to the model prediction
 # daformer
@@ -27,19 +27,23 @@ entropy_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs/local-e
 
 # the path to the original image
 image_folder = '/media/ywh/1/yanweihao/dataset/cityscapes_original/gtFine_trainvaltest/leftImg8bit/train_all'
+
 # the path to the ground truth
 gt_folder = '/media/ywh/1/yanweihao/dataset/cityscapes_original/gtFine_trainvaltest/gtFine/train_all'
 
-# output folder
-output_folder = 'outputs/cityscapes/train_fusion_gta_daformer_new3' #这是去掉了mask按照名称排序的过程
+#num of classes, 16 for synthia, 19 for gta5
+num_classes = 19
 
 # 
 mix_ratio = 0.5
 # 
 resize_ratio = 1
 
+# output folder
+output_folder = 'outputs/cityscapes/train_fusion_gta_dino2' #这是去掉了mask按照名称排序的过程
+
 # 
-mask_suffix = '.png'
+dino_suffix = '.png'
 # 
 # segmentation_suffix = '_gtFine_labelTrainIds.png'
 segmentation_suffix = '_leftImg8bittrainID.png'
@@ -50,35 +54,27 @@ segmentation_suffix_noimg=False
 # 接在aachen_000000_000019_leftImg8bit之后的后缀
 confidence_suffix = '_confi.npy'
 entropy_suffix = '_entro.npy'
+gt_suffix = '_gtFine_labelTrainIds.png'
 confidence_threshold_mic = 0.9
 entropy_ratio_mic = 90  # relative value, lowest 90% entropy
-confidence_threshold_daformer = 0.99  # absolute value
+confidence_threshold_daformer = 0.92  # absolute value
 entropy_ratio_daformer = 60  # relative value, lowest 60% entropy
 confidence_threshold_tufl = 0.9  # absolute value
 entropy_ratio_tufl = 80  # relative value, lowest 60% entropy
-
-#
-gt_suffix = '_gtFine_labelTrainIds.png'
 
 # fusion mode = 1
 # fusion_mode = 0
 fusion_mode = 3
 # 
-sam_classes = [5, 6, 7, 11, 12, 13, 14, 15, 16, 17, 18]  # 11 classes, 5, 6, 7, 
+dino_classes = [5, 6, 7, 11, 12, 13, 14, 15, 16, 17, 18]  # 11 classes, 5, 6, 7, 
 # 
-shrink_num = 2
 # 
 display_size = (350, 700)
 #
-road_center_rect = (740, 780, 1645, 995)  # (740, 810, 1625, 995)
 # whether to save the mixed result
 save_mix_result = False
-save_sam_result = True
 save_all_fusion = True
 
-#num of classes, 16 for synthia, 19 for gta5
-num_classes = 19
-
 # num of images to process
-debug_num = 2975 # 2975 - 1648 = 1327
-begin_index = 0 # 0
+debug_num = 2975 # 2975 - 1087 = 1888
+begin_index = 0 # 804 + 283 = 1087
