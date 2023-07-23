@@ -40,7 +40,7 @@ mix_ratio = 0.5
 resize_ratio = 1
 
 # output folder
-output_folder = 'outputs/cityscapes/train_fusion_gta_dino2' #这是去掉了mask按照名称排序的过程
+output_folder = 'outputs/cityscapes/train_fusion_gta_dino4' #这是去掉了mask按照名称排序的过程
 
 # 
 dino_suffix = '.png'
@@ -57,7 +57,7 @@ entropy_suffix = '_entro.npy'
 gt_suffix = '_gtFine_labelTrainIds.png'
 confidence_threshold_mic = 0.9
 entropy_ratio_mic = 90  # relative value, lowest 90% entropy
-confidence_threshold_daformer = 0.92  # absolute value
+confidence_threshold_daformer = 0.85  # absolute value
 entropy_ratio_daformer = 60  # relative value, lowest 60% entropy
 confidence_threshold_tufl = 0.9  # absolute value
 entropy_ratio_tufl = 80  # relative value, lowest 60% entropy
