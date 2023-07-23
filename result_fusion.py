@@ -1396,6 +1396,7 @@ class Fusion_GTA():
         # mask_names = [mask_name for _, mask_name in sorted(zip(mask_areas, mask_names), reverse=True)]
         
         sam_mask = np.ones_like(segmentation[:, :, 0], dtype=np.uint8) * 255
+        sam_mask_majority = copy.deepcopy(sam_mask)
         for index, mask_name in enumerate(mask_names):
             mask_path = os.path.join(self.mask_folder, image_name, mask_name)
             mask = cv2.imread(mask_path)  # [h,w,3]
@@ -1410,6 +1411,8 @@ class Fusion_GTA():
             num_ids = [num_id for _, num_id in sorted(zip(counts, num_ids), reverse=True)]
             counts = sorted(counts, reverse=True)
             most_freq_id = num_ids[0]
+            
+            sam_mask_majority[mask[:, :, 0] == 255] = most_freq_id
             
             if len(counts) >= 2:
                 # [building, wall]
@@ -1467,7 +1470,7 @@ class Fusion_GTA():
             # fill the sam mask using the most frequent trainid in segmentation
             sam_mask[mask[:, :, 0] == 255] = most_freq_id  # 存在重叠的问题
             # print('mask_name {}, most_freq_id{}'.format(mask_name, most_freq_id))
-        return sam_mask
+        return sam_mask, sam_mask_majority
         
     def color_segmentation(self, segmentation):
         #get the color segmentation result, initial the color segmentation result with black (0,0,0)
