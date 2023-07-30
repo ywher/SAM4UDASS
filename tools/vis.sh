@@ -8,24 +8,24 @@
 
 
 ###cityscapes
-# python vis_mask.py \
-# --mask_folder '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/cityscapes/train2' \
-# --image_folder '/media/ywh/1/yanweihao/dataset/cityscapes_original/gtFine_trainvaltest/leftImg8bit/train_all' \
-# --output_folder 'outputs/cityscapes_mix2' \
-# --mix_ratio 0.5 \
-# --mask_suffix '.png' \
-# --img_suffix '.png'
+python vis_mask.py \
+--mask_folder '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/cityscapes/train2' \
+--image_folder '/media/ywh/1/yanweihao/dataset/cityscapes_original/gtFine_trainvaltest/leftImg8bit/train_all' \
+--output_folder 'outputs/cityscapes_mix2' \
+--mix_ratio 0.5 \
+--mask_suffix '.png' \
+--img_suffix '.png'
 
 
 
 ###acdc
-python vis_mask.py \
---mask_folder '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/ACDC/train2' \
---image_folder '/media/ywh/1/yanweihao/dataset/acdc/rgb_anon/train' \
---output_folder 'outputs/acdc_mix2' \
---mix_ratio 0.5 \
---mask_suffix '.png' \
---img_suffix '.png'
+# python vis_mask.py \
+# --mask_folder '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/ACDC/train2' \
+# --image_folder '/media/ywh/1/yanweihao/dataset/acdc/rgb_anon/train' \
+# --output_folder 'outputs/acdc_mix2' \
+# --mix_ratio 0.5 \
+# --mask_suffix '.png' \
+# --img_suffix '.png'
 
 #kyxz
 # for scene in scene2 scene3

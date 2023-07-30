@@ -4,6 +4,7 @@ import numpy as np
 import argparse
 import tqdm
 import colorsys
+import natsort
 
 def get_color_from_index(index):
     color = cv2.applyColorMap(np.uint8([index % 256]), cv2.COLORMAP_JET)[0][0]
@@ -41,11 +42,11 @@ def process_images(mask_folder, image_folder, output_folder, mix_ratio=0.5, mask
         
     
     subfolders = [f.path for f in os.scandir(mask_folder) if f.is_dir()]
-    subfolders.sort()
+    subfolders.sort()  #　按照图片的名称进行排序
     # img_suffix = '.'+os.listdir(image_folder)[0].split('.')[-1]
     bar = tqdm.tqdm(total=len(subfolders))
     for subfolder in subfolders:
-        image_name = os.path.basename(subfolder) #000228
+        image_name = os.path.basename(subfolder) # aachen_000000_000019_leftImg8bit
         image_name += img_suffix
         # image_name.remove('metadata')
         image_path2 = os.path.join(image_folder, image_name)
@@ -57,7 +58,9 @@ def process_images(mask_folder, image_folder, output_folder, mix_ratio=0.5, mask
         result_gray_image = np.zeros((height, width, 3), dtype=np.float32)
 
         color_index = 0
-        for image_file in os.listdir(subfolder):
+        mask_names = os.listdir(subfolder)
+        mask_names = natsort.natsorted(mask_names)
+        for image_file in mask_names:
             if mask_suffix not in image_file:
                 continue
             image_path1 = os.path.join(subfolder, image_file)
