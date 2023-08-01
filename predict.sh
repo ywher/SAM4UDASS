@@ -35,8 +35,8 @@
 # done
 
 # CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
-# --input '/home/cyber-fx/ywh/dataset/sjtu/image/train/sjtu7' \
-# --output 'outputs/sjtu7' \
+# --input '/media/ywh/1/yanweihao/dataset/sjtu/image/train/sjtu1' \
+# --output '/media/ywh/Elements/projects/sam/outputs/sjtu1' \
 # --points-per-side 64 \
 # --pred-iou-thresh 0.86 \
 # --stability-score-thresh 0.92 \
@@ -45,8 +45,8 @@
 # --min-mask-region-area 100
 
 CUDA_VISIBLE_DEVICES=1 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
---input '/home/cyber-fx/ywh/dataset/sjtu/image/train/sjtu9' \
---output 'outputs/sjtu9' \
+--input '/media/ywh/1/yanweihao/dataset/sjtu/image/train/sjtu7' \
+--output '/media/ywh/Elements/projects/sam/outputs/sjtu7' \
 --points-per-side 64 \
 --pred-iou-thresh 0.86 \
 --stability-score-thresh 0.92 \

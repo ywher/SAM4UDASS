@@ -8,7 +8,6 @@ Semantic segmentation is an important perception task for intelligent vehicles t
 
 ## Method Overview
 
-![1690730471272](image/README/1690730471272.png)
 
 ## Environment Setup
 
