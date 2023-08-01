@@ -9,7 +9,7 @@ import cv2
 import json
 import shutil
 from tqdm import tqdm
-
+import argparse
 
 def sort_masks(folder_path):
     folder_list = os.listdir(folder_path)
@@ -59,13 +59,20 @@ def sort_masks(folder_path):
 
     return folder_dict
 
+def get_args():
+    args = argparse.ArgumentParser()
+    args.add_argument('--folder_path', type=str, default='/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/ACDC/train2')
+    args.add_argument('--output_file', type=str, default='/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/ACDC/mapping_train2.json')
+    return args.parse_args()
+
 
 if __name__ == '__main__':
     # Example usage
-    folder_path = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/ACDC/train2'
-    mapping_dict = sort_masks(folder_path)
+    args = get_args()
+    # folder_path = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/ACDC/train2'
+    mapping_dict = sort_masks(args.folder_path)
 
     # Save the mapping dictionary to a JSON file
-    output_file = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/ACDC/mapping_train2.json'
-    with open(output_file, 'w') as f:
+    # output_file = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/ACDC/mapping_train2.json'
+    with open(args.output_file, 'w') as f:
         json.dump(mapping_dict, f, indent=2)
