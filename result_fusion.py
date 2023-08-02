@@ -2000,7 +2000,8 @@ class Fusion_SJTU():
                  mix_ratio=None, resize_ratio=None, output_folder=None, mask_suffix=None,
                  segmentation_suffix=None, segmentation_suffix_noimg=None,
                  confidence_suffix=None, entropy_suffix=None, gt_suffix=None,
-                 fusion_mode=None, sam_classes=None, shrink_num=None, display_size=(200, 400)):
+                 fusion_mode=None, sam_classes=None, shrink_num=None, display_size=(200, 400),
+                 sam_alpha=0.2):
         # the path to the sam mask
         self.mask_folder = mask_folder
         # the path to the uda prediction
@@ -2048,6 +2049,8 @@ class Fusion_SJTU():
         # one folder corresponds to one image name without suffix
         self.image_names = os.listdir(self.mask_folder)
         self.image_names.sort()
+        
+        self.sam_alpha = sam_alpha
 
         # make the folder to save the fusion result
         # the fusion result in trainID
@@ -2112,30 +2115,30 @@ class Fusion_SJTU():
             
             if len(counts) >= 2:
                 # [building, wall]
-                if num_ids[0] == 2 and num_ids[1] == 3 and counts[1] / counts[0] >= 0.3:
+                if num_ids[0] == 2 and num_ids[1] == 3 and counts[1] / counts[0] >= self.sam_alpha:  # 0.3
                     most_freq_id = num_ids[1]
                 # [building, fence]
-                elif num_ids[0] == 2 and num_ids[1] == 4 and counts[1] / counts[0] >= 0.25:
+                elif num_ids[0] == 2 and num_ids[1] == 4 and counts[1] / counts[0] >= self.sam_alpha:  #0.25
                     most_freq_id = num_ids[1]
                 # [building, pole]
-                elif num_ids[0] == 2 and num_ids[1] == 5 and counts[1] / counts[0] >= 0.15:
+                elif num_ids[0] == 2 and num_ids[1] == 5 and counts[1] / counts[0] >= self.sam_alpha:  # 0.15
                     most_freq_id = num_ids[1]
                 # [building, traffic sign]
-                elif num_ids[0] == 2 and num_ids[1] == 7 and counts[1] / counts[0] >= 0.1:
+                elif num_ids[0] == 2 and num_ids[1] == 7 and counts[1] / counts[0] >= self.sam_alpha:  # 0.1
                     mask_shape = Mask_Shape(mask)
                     # if the mask is rectangular or triangular, then assign the mask with traffic sign
                     if mask_shape.is_approx_rectangular() or mask_shape.is_approx_triangular():
                         most_freq_id = num_ids[1]
                 # [wall, fence]
-                elif num_ids[0] == 3 and num_ids[1] == 4 and counts[1] / counts[0] >= 0.25:
+                elif num_ids[0] == 3 and num_ids[1] == 4 and counts[1] / counts[0] >= self.sam_alpha:  # 0.25
                     most_freq_id = num_ids[1]
                 # [vegetation, terrain]
-                elif num_ids[0] == 8 and num_ids[1] == 9 and counts[1] / counts[0] >= 0.05:
+                elif num_ids[0] == 8 and num_ids[1] in [5,6,7,9] and counts[1] / counts[0] >= self.sam_alpha:  # 0.05
                     most_freq_id = num_ids[1]
                 # [terrain, sidewalk]
                 elif num_ids[0] == 9 and num_ids[1] == 1:
-                    num_id_0 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[0], mask[:, :, 0] == 255), entropy_mask))
-                    num_id_1 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[1], mask[:, :, 0] == 255), entropy_mask))
+                    num_id_0 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[0], mask[:, :, 0] == 255), confidence_mask))
+                    num_id_1 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[1], mask[:, :, 0] == 255), confidence_mask))
                     if num_id_1 > num_id_0:
                         most_freq_id = num_ids[1]
                 # for synthia

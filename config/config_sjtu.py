@@ -2,7 +2,7 @@
 # define the folder path and parameters
 # train2 is the folder of the generated mask, preciser
 # train is the folder of the generated mask, default sam params
-mask_folder = '/home/cyber-fx/ywh/projects/SAM4UDASS/outputs/sjtu9'
+mask_folder = '/media/ywh/Elements/projects/segmentation/segment-anything/outputs/sjtu1'
 
 # the path to the model prediction
 # daformer
@@ -21,17 +21,18 @@ mask_folder = '/home/cyber-fx/ywh/projects/SAM4UDASS/outputs/sjtu9'
 # entropy_folder = '/media/ywh/1/yanweihao/projects/uda/MIC/seg/work_dirs/local-exp80/230713_0133_gtaHR2csHR_1024x1024_dacs_a999_fdthings_rcs001-20_cpl2_m64-07-spta_hrda1-512-01_daformer_sepaspp_sl_mitb5_poly10warm_s0_8caed/pred_entropy'
 
 # tufl stage 1
-segmentation_folder = '/home/cyber-fx/ywh/projects/DAFormer/work_dirs/local-exp7/230717_1302_cs2sjtu_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_2d71c/pred_sjtu/sjtu9/pred_trainid'
-confidence_folder = '/home/cyber-fx/ywh/projects/DAFormer/work_dirs/local-exp7/230717_1302_cs2sjtu_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_2d71c/pred_sjtu/sjtu9/pred_confidence'
-entropy_folder = '/home/cyber-fx/ywh/projects/DAFormer/work_dirs/local-exp7/230717_1302_cs2sjtu_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_2d71c/pred_sjtu/sjtu9/pred_entropy'
+segmentation_folder = '/media/ywh/Elements/projects/UDA/BiSeNet-uda/outputs/tufl_sjtu_focal_10k/pred_trainid/sjtu1'
+confidence_folder = '/media/ywh/Elements/projects/UDA/BiSeNet-uda/outputs/tufl_sjtu_focal_10k/pred_confidence/sjtu1'
+entropy_folder = '/media/ywh/Elements/projects/UDA/BiSeNet-uda/outputs/tufl_sjtu_focal_10k/pred_entropy/sjtu1'
 
 # the path to the original image
-image_folder = '/home/cyber-fx/ywh/dataset/sjtu/image/train/sjtu9'
+image_folder = '/media/ywh/1/yanweihao/dataset/sjtu/image/train/sjtu1'
 # the path to the ground truth
-gt_folder = '/home/cyber-fx/ywh/dataset/sjtu/label/train/sjtu9'
+gt_folder = '/media/ywh/1/yanweihao/dataset/sjtu/label/train/sjtu1'
+# gt_folder = '/home/cyber-fx/ywh/dataset/sjtu/label/train/sjtu9'
 
 # output folder
-output_folder = 'outputs/sjtu9_fusion' #这是去掉了mask按照名称排序的过程
+output_folder = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/sjtu1_fusion' #这是去掉了mask按照名称排序的过程
 
 # 
 mix_ratio = 0.5
@@ -42,7 +43,7 @@ resize_ratio = 1
 mask_suffix = '.png'
 # 
 # segmentation_suffix = '_gtFine_labelTrainIds.png'
-segmentation_suffix = 'trainID.png'
+segmentation_suffix = '.png'
 #
 segmentation_suffix_noimg=True
 
@@ -57,7 +58,8 @@ confidence_threshold_tufl = 0.99  # absolute value
 entropy_ratio_tufl = 60  # relative value, lowest 60% entropy
 
 #
-gt_suffix = '_gtFine_labelTrainIds.png'
+# gt_suffix = '_gtFine_labelTrainIds.png'
+gt_suffix = None
 
 # fusion mode = 1
 # fusion_mode = 0
@@ -68,6 +70,8 @@ sam_classes = [5, 6, 7, 11, 12, 13, 14, 15, 16, 17, 18]  # 11 classes, 5, 6, 7,
 shrink_num = 2
 # 
 display_size = (350, 700)
+#sam_alpha
+sam_alpha = 0.15
 #
 road_center_rect = (740, 780, 1645, 995)  # no need
 # whether to save the mixed result
@@ -78,5 +82,5 @@ save_all_fusion = True
 num_classes = 19
 
 # num of images to process
-debug_num = 1601 # 2033 - 249 = 1784
+debug_num = 2399 # 2033 - 249 = 1784
 begin_index = 0 # 0
