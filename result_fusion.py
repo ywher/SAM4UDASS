@@ -1302,7 +1302,7 @@ class Fusion_GTA():
                  segmentation_suffix=None, segmentation_suffix_noimg=None,
                  confidence_suffix=None, entropy_suffix=None, gt_suffix=None,
                  fusion_mode=None, sam_classes=None, shrink_num=None, display_size=(200, 400),
-                 sam_alpha=0.2, time_process=True):
+                 sam_alpha=0.2, time_process=True, time_filename='time.txt'):
         # the path to the sam mask
         self.mask_folder = mask_folder
         # the path to the uda prediction
@@ -1353,6 +1353,7 @@ class Fusion_GTA():
         
         self.sam_alpha = sam_alpha
         self.time_process = time_process
+        self.time_filename = time_filename
         if self.time_process:
             self.sample_num = 0
             self.total_majority_time = 0
@@ -1390,6 +1391,7 @@ class Fusion_GTA():
         '''
         use the mask from sam and the prediction from uda
         output the trainid and color mask
+        segmentation: [H, W]
         to do: add the confidence threshold of segmentation result
         '''
         self.sample_num += 1
@@ -1409,48 +1411,50 @@ class Fusion_GTA():
         # mask_names = [mask_name for _, mask_name in sorted(zip(mask_areas, mask_names), reverse=True)]
         
         time_mask = time.time()
-        sam_mask = np.ones_like(segmentation[:, :, 0], dtype=np.uint8) * 255
+        sam_mask = np.ones_like(segmentation, dtype=np.uint8) * 255
         sam_mask_majority = copy.deepcopy(sam_mask)
         time_mask = time.time() - time_mask
         for index, mask_name in enumerate(mask_names):
-            start_time = time.time()
             mask_path = os.path.join(self.mask_folder, image_name, mask_name)
-            mask = cv2.imread(mask_path)  # [h,w,3]
+            mask = cv2.imread(mask_path, 0)  # [h,w,3]
+            start_time = time.time()
             # print('mask name', mask_name)
             # cv2.imshow('mask', cv2.resize(mask, (512,256)))
             # cv2.waitKey(100)
             # cv2.destroyAllWindows()
             # get the number of trainids in the segmentation result using the mask with value 255
-            trainids = segmentation[:, :, 0][mask[:, :, 0] == 255]  # [N,]
+            trainids = segmentation[mask == 255]  # [N,]
             num_ids, counts = np.unique(trainids, return_counts=True)  # [n, ], [n1, n2, n3, ...]
             # sort the num_ids according to the counts
             num_ids = [num_id for _, num_id in sorted(zip(counts, num_ids), reverse=True)]
             counts = sorted(counts, reverse=True)
             most_freq_id = num_ids[0]
             
-            sam_mask_majority[mask[:, :, 0] == 255] = most_freq_id
+            sam_mask_majority[mask == 255] = most_freq_id
             self.total_majority_time += time.time() - start_time
             
             if len(counts) >= 2:
                 # [building, wall]
-                if num_ids[0] == 2 and num_ids[1] == 3 and counts[1] / counts[0] >= self.sam_alpha:  # 0.3
+                # if num_ids[0] == 2 and num_ids[1] == 3 and counts[1] / counts[0] >= self.sam_alpha:  # 0.3
+                #     most_freq_id = num_ids[1]
+                # # [building, fence]
+                # elif num_ids[0] == 2 and num_ids[1] == 4 and counts[1] / counts[0] >= self.sam_alpha:  # 0.25
+                #     most_freq_id = num_ids[1]
+                # # [building, pole]
+                # elif num_ids[0] == 2 and num_ids[1] == 5 and counts[1] / counts[0] >= self.sam_alpha:  # 0.15
+                #     most_freq_id = num_ids[1]
+                # # [building, traffic sign]
+                # elif num_ids[0] == 2 and num_ids[1] == 7 and counts[1] / counts[0] >= 0.05: #self.sam_alpha:  # 0.1 0.04 for sample aachen_000111
+                #     # print(index, mask_name)
+                #     # print('counts', counts[0], counts[1], counts[1] / counts[0])
+                #     # print() 
+                #     # mask_shape = Mask_Shape(mask)
+                #     # # if the mask is rectangular or triangular, then assign the mask with traffic sign
+                #     # if mask_shape.is_approx_rectangular() or mask_shape.is_approx_triangular():
+                #         # print('true')
+                #     most_freq_id = num_ids[1]
+                if num_ids[0] == 2 and num_ids[1] in [3,4,5,7] and counts[1] / counts[0] >= self.sam_alpha:
                     most_freq_id = num_ids[1]
-                # [building, fence]
-                elif num_ids[0] == 2 and num_ids[1] == 4 and counts[1] / counts[0] >= self.sam_alpha:  # 0.25
-                    most_freq_id = num_ids[1]
-                # [building, pole]
-                elif num_ids[0] == 2 and num_ids[1] == 5 and counts[1] / counts[0] >= self.sam_alpha:  # 0.15
-                    most_freq_id = num_ids[1]
-                # [building, traffic sign]
-                elif num_ids[0] == 2 and num_ids[1] == 7 and counts[1] / counts[0] >= 0.05: #self.sam_alpha:  # 0.1 0.04 for sample aachen_000111
-                    # print(index, mask_name)
-                    # print('counts', counts[0], counts[1], counts[1] / counts[0])
-                    # print() 
-                    mask_shape = Mask_Shape(mask)
-                    # if the mask is rectangular or triangular, then assign the mask with traffic sign
-                    if mask_shape.is_approx_rectangular() or mask_shape.is_approx_triangular():
-                        # print('true')
-                        most_freq_id = num_ids[1]
                 # [wall, fence]
                 elif num_ids[0] == 3 and num_ids[1] == 4 and counts[1] / counts[0] >= self.sam_alpha:  # 0.25
                     most_freq_id = num_ids[1]
@@ -1458,26 +1462,32 @@ class Fusion_GTA():
                 elif num_ids[0] == 8 and num_ids[1] == 9 and counts[1] / counts[0] >= self.sam_alpha:  # 0.05
                     most_freq_id = num_ids[1]
                 # [terrain, sidewalk]
-                elif num_ids[0] == 9 and num_ids[1] == 1:
-                    num_id_0 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[0], mask[:, :, 0] == 255), entropy_mask))
-                    num_id_1 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[1], mask[:, :, 0] == 255), entropy_mask))
-                    if num_id_1 > num_id_0:
-                        most_freq_id = num_ids[1]
+                # elif num_ids[0] == 9 and num_ids[1] == 1:
+                #     num_id_0 = np.sum(np.logical_and(np.logical_and(segmentation == num_ids[0], mask == 255), confidence_mask))
+                #     num_id_1 = np.sum(np.logical_and(np.logical_and(segmentation == num_ids[1], mask == 255), confidence_mask))
+                #     if num_id_1 > num_id_0:
+                #         most_freq_id = num_ids[1]
+                elif num_ids[0] == 9 and num_ids[1] == 1 and counts[1] / counts[0] >= self.sam_alpha:  # 0.05
+                    most_freq_id = num_ids[1]
+                    # num_id_0 = np.sum(np.logical_and(np.logical_and(segmentation == num_ids[0], mask == 255), confidence_mask))
+                    # num_id_1 = np.sum(np.logical_and(np.logical_and(segmentation == num_ids[1], mask == 255), confidence_mask))
+                    # if num_id_1 > num_id_0:
+                    #     most_freq_id = num_ids[1]
                 # for synthia
                 # [vegetation, building], 窗户被判断为vegetation
-                elif num_ids[0] == 8 and num_ids[1] == 2:
-                    num_id_0 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[0], 
-                                                    mask[:, :, 0] == 255), confidence_mask))
-                    num_id_1 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[1], 
-                                                    mask[:, :, 0] == 255), confidence_mask))
-                    if num_id_0 ==0 or num_id_1 / num_id_0 > 0.25:  # 0.25
-                        most_freq_id = num_ids[1]
-                # [road, sidewalk]
-                elif num_ids[0] == 0 and num_ids[1] == 1:
-                    if index == 0:
-                        most_freq_id = 0
-                    elif counts[1] / counts[0] >= self.sam_alpha:
-                        most_freq_id = num_ids[1]
+                # elif num_ids[0] == 8 and num_ids[1] == 2:
+                #     num_id_0 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[0], 
+                #                                     mask[:, :, 0] == 255), confidence_mask))
+                #     num_id_1 = np.sum(np.logical_and(np.logical_and(segmentation[:,:,0] == num_ids[1], 
+                #                                     mask[:, :, 0] == 255), confidence_mask))
+                #     if num_id_0 ==0 or num_id_1 / num_id_0 > 0.25:  # 0.25
+                #         most_freq_id = num_ids[1]
+                # # [road, sidewalk]
+                # elif num_ids[0] == 0 and num_ids[1] == 1:
+                #     if index == 0:
+                #         most_freq_id = 0
+                #     elif counts[1] / counts[0] >= self.sam_alpha:
+                #         most_freq_id = num_ids[1]
                 # [sidewalk, bicycle]
                 elif num_ids[0] == 1 and num_ids[1] == 18 and counts[1] / counts[0] >= self.sam_alpha:  #0.15
                     most_freq_id = num_ids[1]
@@ -1489,12 +1499,12 @@ class Fusion_GTA():
                 #         most_freq_id = 0
                     
             # fill the sam mask using the most frequent trainid in segmentation
-            sam_mask[mask[:, :, 0] == 255] = most_freq_id  # 存在重叠的问题
+            sam_mask[mask == 255] = most_freq_id  # 存在重叠的问题
             self.total_sgml_time += time.time() - start_time
             # print('mask_name {}, most_freq_id{}'.format(mask_name, most_freq_id))
         # self.total_majority_time += (time_mask + time_name)
         # self.total_sgml_time += (time_mask + time_name)
-        print('time name {}, time mask {}'.format(time_name, time_mask))
+        # print('time name {}, time mask {}'.format(time_name, time_mask))
         return sam_mask, sam_mask_majority
         
     def color_segmentation(self, segmentation):
@@ -1589,7 +1599,7 @@ class Fusion_GTA():
         #use the segmentation result to fill the pixels in fusion_trainid whose trainid is 255
         # fusion_trainid_bg = fusion_trainid.copy()
         indexs = np.where(fusion_trainid_bg == 255)
-        fusion_trainid_bg[indexs] = segmentation[:, :, 0][indexs]      
+        fusion_trainid_bg[indexs] = segmentation[indexs]      
         #use the corresponding color of segmentation result to fill the pixels in fusion_color whose trainid is 255
         fusion_trainid_bg = fusion_trainid_bg.astype(np.uint8)
         self.fusion1_time += time.time() - start_time
@@ -1604,7 +1614,7 @@ class Fusion_GTA():
         # fusion_trainid = np.ones_like(segmentation[:, :, 0], dtype=np.uint8) * 255
         # fusion_trainid = segmentation[:, :, 0].copy() #fill the fusion result all with segmentation result
         start_time = time.time()
-        fusion_trainid = copy.deepcopy(segmentation[:, :, 0])
+        fusion_trainid = copy.deepcopy(segmentation)
         fusion_trainid = fusion_trainid.astype(np.uint8)
         
         #use sam_pred with self.sam_classes to cover the fusion_trainid
@@ -1621,7 +1631,7 @@ class Fusion_GTA():
     def fusion_mode_3(self, segmentation, sam_pred, fusion_trainid=None, 
                       confidence_mask=None, entropy_mask=None):
         '''
-        segmentation: [h, w, 3]
+        segmentation: [h, w]
         sam_pred: [h, w]
         '''
         start_time = time.time()
@@ -1630,8 +1640,6 @@ class Fusion_GTA():
         else:
             # print('copy in fusion 3')
             fusion_trainid_0 = copy.deepcopy(fusion_trainid)
-        if len(segmentation.shape) > 2:
-            segmentation = segmentation[:, :, 0]
         # fusion_ids = np.unique(fusion_trainid_0)
         # fusion_trainid_0: [h, w], fusion_color_0: [h, w, 3]
         # # 预测结果为road但是sam中和road对应的类别为sidewalk(分割成了同一个mask)，将预测结果改为road
@@ -1724,7 +1732,7 @@ class Fusion_GTA():
             based on fusion_mode_3, 
             use confidence_mask to select model segmentation to the fusion result
         input: 
-            segmentation:   [h, w, 3],  uint8, from class 0 to 18
+            segmentation:   [h, w],  uint8, from class 0 to 18
             sam_pred:       [h, w],     uint8, from class 0 to 18
             confidence_mask:[h, w],     bool,
         output:
@@ -1737,9 +1745,9 @@ class Fusion_GTA():
         else:
             # print('copy in fusion 4')
             fusion_trainid = copy.deepcopy(fusion_trainid)
-        road_mask = (segmentation[:, :, 0] == 0) & (fusion_trainid == 1) & confidence_mask
-        side_mask = (segmentation[:, :, 0] == 1) & (fusion_trainid == 0) & confidence_mask
-        buil_mask = (segmentation[:, :, 0] == 2) & (fusion_trainid == 7) & confidence_mask
+        road_mask = (segmentation == 0) & (fusion_trainid == 1) & confidence_mask
+        side_mask = (segmentation == 1) & (fusion_trainid == 0) & confidence_mask
+        buil_mask = (segmentation == 2) & (fusion_trainid == 7) & confidence_mask
         fusion_trainid[road_mask] = 0  # road
         fusion_trainid[side_mask] = 1  # sidewalk
         # newly added
@@ -1768,13 +1776,13 @@ class Fusion_GTA():
         else:
             fusion_trainid = copy.deepcopy(fusion_trainid)
         # [road, sidewalk]
-        road_mask = (segmentation[:, :, 0] == 0) & (fusion_trainid == 1) & entropy_mask
+        road_mask = (segmentation == 0) & (fusion_trainid == 1) & entropy_mask
         # [sidewalk, road]
-        side_mask = (segmentation[:, :, 0] == 1) & (fusion_trainid == 0) & entropy_mask
+        side_mask = (segmentation == 1) & (fusion_trainid == 0) & entropy_mask
         # [building, traffic sign]
-        buil_mask = (segmentation[:, :, 0] == 2) & (fusion_trainid == 7) & entropy_mask
+        buil_mask = (segmentation == 2) & (fusion_trainid == 7) & entropy_mask
         # [vegetation, sidewalk]
-        vege_mask = (segmentation[:, :, 0] == 8) & (fusion_trainid == 1) & entropy_mask
+        vege_mask = (segmentation == 8) & (fusion_trainid == 1) & entropy_mask
         
         fusion_trainid[road_mask] = 0
         fusion_trainid[side_mask] = 1
@@ -2044,7 +2052,7 @@ class Fusion_GTA():
         print('avg fusion3 time:', avg_fusion3_time)
         print('avg fusion1+fusion3 time:', avg_f1f3_time)
         # save the time result to txt
-        with open('outputs/time.txt', 'w') as f:
+        with open(os.path.join('outputs', self.time_filename), 'w') as f:
             f.write('total sample: {}\n'.format(self.sample_num))
             f.write('avg major time: {}\n'.format(avg_majority_time))
             f.write('avg sgml time: {}\n'.format(avg_sgml_time))
