@@ -36,7 +36,7 @@ image_folder = '/media/ywh/1/yanweihao/dataset/cityscapes_original/gtFine_trainv
 gt_folder = '/media/ywh/1/yanweihao/dataset/cityscapes_original/gtFine_trainvaltest/gtFine/train_all'
 
 # output folder
-output_folder = 'outputs/cityscapes/daformer/daformer_gta_alpha0.15' #这是去掉了mask按照名称排序的过程
+output_folder = 'outputs/cityscapes/daformer/daformer_gta_sam' #这是去掉了mask按照名称排序的过程
 
 # 
 mix_ratio = 0.5
@@ -75,17 +75,18 @@ shrink_num = 2
 # 
 display_size = (350, 700)
 #sam_alpha
-sam_alpha = 0.15
+sam_alpha = 0.2
 #
 road_center_rect = (740, 780, 1645, 995)  # (740, 810, 1625, 995)
 # whether to save the mixed result
 save_mix_result = False
-save_sam_result = False
+save_sam_result = True
 save_all_fusion = True
+time_process = True
 
 #num of classes, 16 for synthia, 19 for gta5
 num_classes = 19
 
 # num of images to process
-debug_num = 2975 # 2975 - 1648 = 1327
+debug_num = 10 # 2975 - 1648 = 1327
 begin_index = 0 # 0

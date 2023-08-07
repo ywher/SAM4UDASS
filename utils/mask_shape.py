@@ -11,7 +11,7 @@ class Mask_Shape:
         self.peri = cv2.arcLength(self.contour, True)
 
     def is_approx_rectangular(self):
-        approx = cv2.approxPolyDP(self.contour, 0.01 * self.peri, True)
+        approx = cv2.approxPolyDP(self.contour, 0.02 * self.peri, True)
         return len(approx) == 4
 
     def is_approx_triangular(self):
