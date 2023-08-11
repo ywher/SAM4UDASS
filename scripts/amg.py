@@ -13,6 +13,10 @@ import json
 import os
 from typing import Any, Dict, List
 from tqdm import tqdm
+import time
+import pandas as pd
+import numpy as np
+from natsort import natsorted
 
 parser = argparse.ArgumentParser(
     description=(
@@ -63,6 +67,9 @@ parser.add_argument(
         "Requires pycocotools."
     ),
 )
+
+parser.add_argument("--num_samples", type=int, default=500, help="Number of images to generate. -1 for all")
+parser.add_argument("--count_time", type=bool, default=True, help="Count time for each image.")
 
 amg_settings = parser.add_argument_group("AMG Settings")
 
@@ -207,9 +214,18 @@ def main(args: argparse.Namespace) -> None:
         targets = [
             f for f in os.listdir(args.input) if not os.path.isdir(os.path.join(args.input, f))
         ]
+        if args.num_samples > 0:
+            targets = [
+            f for f in natsorted(os.listdir(args.input)) if not os.path.isdir(os.path.join(args.input, f))
+                        ]
+            targets = targets[: args.num_samples]
         targets = [os.path.join(args.input, f) for f in targets]
 
     os.makedirs(args.output, exist_ok=True)
+    
+    image_names = []
+    image_time = []
+    num_mask = []
 
     bar = tqdm(total=len(targets))
     for t in targets:
@@ -220,10 +236,14 @@ def main(args: argparse.Namespace) -> None:
             continue
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
+        start_time = time.time()
         masks = generator.generate(image)
+        image_time.append(time.time() - start_time)
+        num_mask.append(len(masks))
 
         base = os.path.basename(t)
         base = os.path.splitext(base)[0]
+        image_names.append(base)
         save_base = os.path.join(args.output, base)
         if output_mode == "binary_mask":
             os.makedirs(save_base, exist_ok=False)
@@ -235,8 +255,21 @@ def main(args: argparse.Namespace) -> None:
         bar.update(1)
     print("Done!")
     bar.close()
+    
+    if args.count_time:
+        with open(os.path.join(args.output, 'time.txt'), 'w') as f:
+            #calculate the average time
+            f.write('average time: ' + str(sum(image_time)/len(image_time)) + '\n')
+            for i in range(len(image_names)):
+                f.write(image_names[i] + ' ' + str(image_time[i]) + ' ' + str(num_mask[i]) + '\n')
+        #save the image name, time time and num_mask in csv file
+        df = pd.DataFrame({'image_name':image_names, 'time':image_time, 'num_mask':num_mask})
+        df.to_csv(os.path.join(args.output, 'time.csv'), index=False, sep=',')
+        print('time saved in time.txt and time.csv')
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    print('args.num_samples', args.num_samples)
+    print('args.count_time', args.count_time)
     main(args)

@@ -12,15 +12,19 @@
 # python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
 # --input '/media/ywh/1/yanweihao/dataset/cityscapes_original/gtFine_trainvaltest/leftImg8bit/unsup_single/augsburg' --output 'outputs/cityscapes/unsup_single/augsburg'
 
-# CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
-# --input '/media/ywh/1/yanweihao/dataset/cityscapes_original/gtFine_trainvaltest/leftImg8bit/train_all' \
-# --output 'outputs/cityscapes/train3' \
-# --points-per-side 64 \
-# --pred-iou-thresh 0.86 \
-# --stability-score-thresh 0.92 \
-# --crop-n-layers 1 \
-# --crop-n-points-downscale-factor 2 \
-# --min-mask-region-area 100 \
+CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
+--input '/media/cyber-fx/ywh_disk/datasets/cityscapes/leftImg8bit/train_all' \
+--output 'outputs/cityscapes/train3' \
+--num_samples 500 \
+--count_time true \
+--points-per-side 64 \
+--pred-iou-thresh 0.86 \
+--stability-score-thresh 0.92 \
+--crop-n-layers 1 \
+--crop-n-points-downscale-factor 2 \
+--min-mask-region-area 100 \
+
+
 # for folder in sjtu7 sjtu9
 # do
 #     CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
@@ -34,6 +38,7 @@
 #     --min-mask-region-area 100
 # done
 
+### sjtu
 # CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
 # --input '/media/ywh/1/yanweihao/dataset/sjtu/image/train/sjtu1' \
 # --output '/media/ywh/Elements/projects/sam/outputs/sjtu1' \
@@ -44,15 +49,15 @@
 # --crop-n-points-downscale-factor 2 \
 # --min-mask-region-area 100
 
-CUDA_VISIBLE_DEVICES=1 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
---input '/media/ywh/1/yanweihao/dataset/sjtu/image/train/sjtu7' \
---output '/media/ywh/Elements/projects/sam/outputs/sjtu7' \
---points-per-side 64 \
---pred-iou-thresh 0.86 \
---stability-score-thresh 0.92 \
---crop-n-layers 1 \
---crop-n-points-downscale-factor 2 \
---min-mask-region-area 100
+# CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
+# --input '/media/ywh/1/yanweihao/dataset/sjtu/image/train/sjtu7' \
+# --output '/media/ywh/Elements/projects/sam/outputs/sjtu7' \
+# --points-per-side 64 \
+# --pred-iou-thresh 0.86 \
+# --stability-score-thresh 0.92 \
+# --crop-n-layers 1 \
+# --crop-n-points-downscale-factor 2 \
+# --min-mask-region-area 100
 
 # Requires open-cv to run post-processing
 
