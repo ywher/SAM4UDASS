@@ -83,7 +83,7 @@ save_mix_result = False
 save_sam_result = False
 save_all_fusion = False
 time_process = True
-time_filename = '500_time1.txt'
+time_filename = '500_time7.txt'
 
 #num of classes, 16 for synthia, 19 for gta5
 num_classes = 19

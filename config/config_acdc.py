@@ -12,9 +12,14 @@ mask_folder = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/out
 # entropy_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs/local-exp8/230527_0645_cs2acdc_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_f753f/entropy'
 
 # pred folder for mic gta
-segmentation_folder = '/media/ywh/1/yanweihao/projects/uda/MIC/seg/work_dirs/local-exp80/230713_0405_csHR2acdcHR_1024x1024_dacs_a999_fdthings_rcs001-20_m64-07-sep_hrda1-512-01_daformer_sepaspp_sl_mitb5_poly10warm_s0_0b9fc/pred_trainid'
-confidence_folder = '/media/ywh/1/yanweihao/projects/uda/MIC/seg/work_dirs/local-exp80/230713_0405_csHR2acdcHR_1024x1024_dacs_a999_fdthings_rcs001-20_m64-07-sep_hrda1-512-01_daformer_sepaspp_sl_mitb5_poly10warm_s0_0b9fc/pred_confidence'
-entropy_folder = '/media/ywh/1/yanweihao/projects/uda/MIC/seg/work_dirs/local-exp80/230713_0405_csHR2acdcHR_1024x1024_dacs_a999_fdthings_rcs001-20_m64-07-sep_hrda1-512-01_daformer_sepaspp_sl_mitb5_poly10warm_s0_0b9fc/pred_entropy'
+# segmentation_folder = '/media/ywh/1/yanweihao/projects/uda/MIC/seg/work_dirs/local-exp80/230713_0405_csHR2acdcHR_1024x1024_dacs_a999_fdthings_rcs001-20_m64-07-sep_hrda1-512-01_daformer_sepaspp_sl_mitb5_poly10warm_s0_0b9fc/pred_trainid'
+# confidence_folder = '/media/ywh/1/yanweihao/projects/uda/MIC/seg/work_dirs/local-exp80/230713_0405_csHR2acdcHR_1024x1024_dacs_a999_fdthings_rcs001-20_m64-07-sep_hrda1-512-01_daformer_sepaspp_sl_mitb5_poly10warm_s0_0b9fc/pred_confidence'
+# entropy_folder = '/media/ywh/1/yanweihao/projects/uda/MIC/seg/work_dirs/local-exp80/230713_0405_csHR2acdcHR_1024x1024_dacs_a999_fdthings_rcs001-20_m64-07-sep_hrda1-512-01_daformer_sepaspp_sl_mitb5_poly10warm_s0_0b9fc/pred_entropy'
+
+# pred folder for tufl acdc
+segmentation_folder = '/media/ywh/1/yanweihao/projects/uda/BiSeNet-uda/outputs/acdc/CityScapes_ACDC_BiSeNet_20kunsup_focal_0.8_0.05_paste_mode_Single_1/pred_train/pred_trainid'
+confidence_folder = '/media/ywh/1/yanweihao/projects/uda/BiSeNet-uda/outputs/acdc/CityScapes_ACDC_BiSeNet_20kunsup_focal_0.8_0.05_paste_mode_Single_1/pred_train/pred_confidence'
+entropy_folder = '/media/ywh/1/yanweihao/projects/uda/BiSeNet-uda/outputs/acdc/CityScapes_ACDC_BiSeNet_20kunsup_focal_0.8_0.05_paste_mode_Single_1/pred_train/pred_entropy'
 
 #pred folder for synthia
 # segmentation_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs/local-exp7/syn/230526_1633_syn2cs_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_103e3/pred_trainid_new'
@@ -23,28 +28,29 @@ entropy_folder = '/media/ywh/1/yanweihao/projects/uda/MIC/seg/work_dirs/local-ex
 # segmentation_folder = '/media/ywh/1/yanweihao/projects/uda/MIC/seg/work_dirs/local-basic/230509_1455_gtaHR2csHR_mic_hrda_s2_108c1/pred_trainid'
 
 # the path to the original image
-image_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/data/acdc/rgb_anon/train'
+image_folder = '/media/ywh/1/yanweihao/dataset/acdc/rgb_anon/train'
 # the path to the ground truth
-gt_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/data/acdc/gt/train'
+gt_folder = '/media/ywh/1/yanweihao/dataset/acdc/gt/train'
 
 #
 mix_ratio = 0.5
 #
 resize_ratio = 0.5
 #
-output_folder = 'outputs/cityscapes/mic_acdc' # 这是去掉了mask按照名称排序的过程
+output_folder = 'outputs/ACDC/tufl_acdc' # 这是去掉了mask按照名称排序的过程
 #
 mask_suffix = '.png'
 #
 # segmentation_suffix = '_gtFine_labelTrainIds.png'
 # segmentation_suffix = '_leftImg8bittrainID.png'
-segmentation_suffix = 'trainID.png'
+# segmentation_suffix = 'trainID.png'  # mic
+segmentation_suffix = '.png'  # tufl GOPR0122_frame_000161_rgb_anon + 
 #
 segmentation_suffix_noimg=True
 #
 confidence_suffix = '_confi.npy'
 entropy_suffix = '_entro.npy'
-confidence_threshold = 0.95  # absolute value 0.99
+confidence_threshold = 0.99  # absolute value 0.99
 entropy_ratio = 80  # relative value, lowest 70% entropy 60
 #
 gt_suffix = '_gt_labelTrainIds.png'
