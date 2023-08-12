@@ -300,7 +300,8 @@ class Fusion_SYN():
                  segmentation_suffix=None, segmentation_suffix_noimg=None,
                  confidence_suffix=None, entropy_suffix=None, gt_suffix=None,
                  fusion_mode=None, sam_classes=None, shrink_num=None, display_size=(200, 400),
-                 sam_model_type='vit_h', sam_model_path='./models/sam_vit_h_4b8939.pth', device='cuda:0'):
+                 sam_model_type='vit_h', sam_model_path='./models/sam_vit_h_4b8939.pth', device='cuda:0',
+                 save_sgml_process=False, save_f3_improve=False):
         # the path to the sam mask
         self.mask_folder = mask_folder
         # the path to the uda prediction
@@ -355,6 +356,8 @@ class Fusion_SYN():
         # one folder corresponds to one image name without suffix
         self.image_names = os.listdir(self.mask_folder)
         self.image_names.sort()
+        self.save_sgml_process = save_sgml_process
+        self.save_f3_improve = save_f3_improve
 
         # make the folder to save the fusion result
         # the fusion result in trainID
@@ -374,6 +377,12 @@ class Fusion_SYN():
             self.check_and_make(os.path.join(self.output_folder, 'horizontal'))
             self.check_and_make(os.path.join(self.output_folder, 'mixed_bg'))
             self.check_and_make(os.path.join(self.output_folder, 'ious'))
+            if self.save_sgml_process:
+                self.sgml_output_folder = os.path.join(self.output_folder, 'sgml_process')
+                self.check_and_make(self.sgml_output_folder)
+            if self.save_f3_improve:
+                self.f3_improve_output_folder = os.path.join(self.output_folder, 'f3_improve')
+                self.check_and_make(self.f3_improve_output_folder)
 
     def check_and_make(self, path):
         if not os.path.exists(path):
@@ -638,6 +647,15 @@ class Fusion_SYN():
         # get the mask names
         mask_names = [name for name in os.listdir(os.path.join(self.mask_folder, image_name)) if self.mask_suffix in name]
         mask_names = natsorted(mask_names)  #现在已经按照mask的面积进行了从大到小的排序
+        if self.save_sgml_process:
+            self.check_and_make(os.path.join(self.sgml_output_folder, image_name))
+            self.check_and_make(os.path.join(self.sgml_output_folder, image_name, "selected_color"))
+            self.check_and_make(os.path.join(self.sgml_output_folder, image_name, "sgml_color"))
+            mask_id_list = [i for i in range(len(mask_names))]
+            id_list = [[], [], []]
+            num_id_list = [[], [], []]
+            rect_flag_list = []
+            segmentation_color = self.color_segmentation(segmentation[:,:,0])
         
         # sort the mask names accrording to the mask area from large to small, can offline
         # mask_areas = []
@@ -650,6 +668,7 @@ class Fusion_SYN():
         
         sam_mask = np.ones_like(segmentation[:, :, 0], dtype=np.uint8) * 255
         for index, mask_name in  enumerate(mask_names):
+            rect_flag = False
             mask_path = os.path.join(self.mask_folder, image_name, mask_name)
             mask = cv2.imread(mask_path)  # [h,w,3]
             # print('mask name', mask_name)
@@ -723,6 +742,7 @@ class Fusion_SYN():
                     # [sidewalk, road]
                     mask_center = cal_center(mask[:, :, 0])
                     if inside_rect(mask_center, self.road_center_rect):
+                        rect_flag = True
                         most_freq_id = 0
                     if index == 0:  #第一张图mask通常就是road
                         most_freq_id = 0
@@ -730,6 +750,36 @@ class Fusion_SYN():
             # fill the sam mask using the most frequent trainid in segmentation
             sam_mask[mask[:, :, 0] == 255] = most_freq_id  # 重叠的问题
             # print('mask_name {}, most_freq_id{}'.format(mask_name, most_freq_id))
+            
+            if self.save_sgml_process:
+                # mix the mask with the segmentation_color with ratio 0.5
+                selected_color = copy.deepcopy(segmentation_color)
+                selected_color[mask[:, :, 0] == 255] = cv2.addWeighted(mask[mask[:, :, 0] == 255], 
+                                                    0.4, segmentation_color[mask[:, :, 0] == 255], 0.6, 0)
+                sgml_color = self.color_segmentation(sam_mask)
+                cv2.imwrite(os.path.join(self.sgml_output_folder, image_name, "selected_color", mask_name), selected_color)
+                cv2.imwrite(os.path.join(self.sgml_output_folder, image_name, "sgml_color", mask_name), sgml_color)    
+                for i in range(3):
+                    if i < len(counts):
+                        id_list[i].append(num_ids[i])
+                        num_id_list[i].append(counts[i])
+                    else:
+                        id_list[i].append(-1)
+                        num_id_list[i].append(0)
+                rect_flag_list.append(rect_flag)
+                
+        if self.save_sgml_process:
+            # save the mask_id_list, id_list, num_id_list, num_id1/num_id0, rect_flag into csv file
+            output_csv_file = "class_info.csv"
+            df = pd.DataFrame({'mask_id': mask_id_list, 
+                            'id_0': id_list[0], 'num_id_0': num_id_list[0],
+                            'id_1': id_list[1], 'num_id_1': num_id_list[1], 
+                            'id_2': id_list[2], 'num_id_2': num_id_list[2],
+                            'ratio_1_0': np.array(num_id_list[1])/np.array(num_id_list[0]), 
+                            'rect_flag': rect_flag_list
+                            })
+            df.to_csv(os.path.join(self.sgml_output_folder, image_name, output_csv_file), index=False)
+        
         return sam_mask
 
     def color_segmentation(self, segmentation):
@@ -936,7 +986,7 @@ class Fusion_SYN():
         return fusion_trainid, fusion_color
 
     def fusion_mode_3(self, segmentation, sam_pred, fusion_trainid_0=None, fusion_color_0=None, 
-                      confidence_mask=None, entropy_mask=None):
+                      confidence_mask=None, entropy_mask=None, image_name=None):
         '''
         segmentation: [h, w, 3] or [h, w]
         sam_pred: [h, w]
@@ -950,6 +1000,11 @@ class Fusion_SYN():
             fusion_trainid_0 = copy.deepcopy(fusion_trainid_0)
             fusion_color_0 = copy.deepcopy(fusion_color_0)
         fusion_ids = np.unique(fusion_trainid_0)
+        if self.save_f3_improve:
+            save_f3_improve_folder = os.path.join(self.f3_improve_output_folder, image_name)
+            self.check_and_make(save_f3_improve_folder)
+            segmentation_color = self.color_segmentation(segmentation)
+            
         # fusion_trainid_0: [h, w], fusion_color_0: [h, w, 3]
         # # 预测结果为road但是sam中和road对应的类别为sidewalk(分割成了同一个mask)，将预测结果改为road
         # mask_road = ((segmentation[:, :, 0] == 0) & (fusion_trainid_0 == 1))
@@ -966,6 +1021,37 @@ class Fusion_SYN():
         mask_pole = ((segmentation == 5) & (fusion_trainid_0 == 2))\
                     | ((segmentation == 5) & (fusion_trainid_0 == 6))\
                     | ((segmentation == 5) & (fusion_trainid_0 == 7))
+        if confidence_mask is not None:
+            mask_pole = np.logical_and(mask_pole, confidence_mask)
+        if self.save_f3_improve and mask_pole.any():
+            white_color_mask = np.zeros_like(segmentation_color) + 255
+            white_color_mask = white_color_mask.astype(np.uint8)
+            uda_pole = copy.deepcopy(segmentation_color)
+            if (segmentation == 5).any():
+                uda_pole[segmentation == 5] = cv2.addWeighted(uda_pole[segmentation == 5], 0.5, white_color_mask[segmentation == 5], 0.5, 0)
+            y1_similar = copy.deepcopy(fusion_color_0)
+            if (fusion_color_0 == 2).any():
+                y1_similar[fusion_color_0 == 2] = cv2.addWeighted(y1_similar[fusion_color_0 == 2], 0.5, white_color_mask[fusion_color_0 == 2], 0.5, 0)
+            if (fusion_color_0 == 6).any():
+                y1_similar[fusion_color_0 == 6] = cv2.addWeighted(y1_similar[fusion_color_0 == 6], 0.5, white_color_mask[fusion_color_0 == 6], 0.5, 0)
+            if (fusion_color_0 == 7).any():
+                y1_similar[fusion_color_0 == 7] = cv2.addWeighted(y1_similar[fusion_color_0 == 7], 0.5, white_color_mask[fusion_color_0 == 7], 0.5, 0)
+            uda_confidence = copy.deepcopy(segmentation_color)
+            uda_confidence[confidence_mask] = cv2.addWeighted(uda_confidence[confidence_mask], 0.5, white_color_mask[confidence_mask], 0.5, 0)
+            and_mask = mask_pole
+            uda_and = copy.deepcopy(segmentation_color)
+            if and_mask.any():
+                uda_and[and_mask] = cv2.addWeighted(uda_and[and_mask], 0.5, white_color_mask[and_mask], 0.5, 0)
+            y1_and = copy.deepcopy(fusion_color_0)
+            if and_mask.any():
+                y1_and[and_mask] = cv2.addWeighted(y1_and[and_mask], 0.5, white_color_mask[and_mask], 0.5, 0)
+            cv2.imwrite(os.path.join(save_f3_improve_folder, 'uda_pole.png'), uda_pole)
+            cv2.imwrite(os.path.join(save_f3_improve_folder, 'y1_similar.png'), y1_similar)
+            cv2.imwrite(os.path.join(save_f3_improve_folder, 'uda_confidence.png'), uda_confidence)
+            cv2.imwrite(os.path.join(save_f3_improve_folder, 'and_mask.png'), np.uint8(and_mask) * 255)
+            cv2.imwrite(os.path.join(save_f3_improve_folder, 'uda_and.png'), uda_and)
+            cv2.imwrite(os.path.join(save_f3_improve_folder, 'y1_and.png'), y1_and)
+            
         # 预测结果为ligh但是sam中和ligh对应的类别为building/pole/vegetation(分割成了同一个mask)，将预测结果改为ligh
         mask_ligh = ((segmentation == 6) & (fusion_trainid_0 == 2)) \
                     | ((segmentation == 6) & (fusion_trainid_0 == 5)) \
@@ -1004,6 +1090,11 @@ class Fusion_SYN():
         # if 18 not in fusion_ids:
         fusion_trainid_0[mask_bike] = 18
         fusion_color_0 = self.color_segmentation(fusion_trainid_0)
+        if self.save_f3_improve and mask_pole.any():
+            y3_and = copy.deepcopy(fusion_color_0)
+            if and_mask.any():
+                y3_and[and_mask] = cv2.addWeighted(y3_and[and_mask], 0.5, white_color_mask[and_mask], 0.5, 0)
+            cv2.imwrite(os.path.join(save_f3_improve_folder, 'y3_and.png'), y3_and)
         return fusion_trainid_0, fusion_color_0
 
     def fusion_mode_4(self, segmentation, sam_pred, fusion_trainid=None, confidence_mask=None):
