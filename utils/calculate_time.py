@@ -2,7 +2,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # 读取CSV文件
-csv_file = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/cityscapes/train3/time.csv'  # 替换为实际的文件路径
+# csv_file = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/cityscapes/train3/time.csv'  # 替换为实际的文件路径
+csv_file = "/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/time_log/500_time_sgml2.csv"
 data = pd.read_csv(csv_file)
 
 # 根据mask数量分组并计算平均时间和方差
@@ -19,11 +20,13 @@ plt.errorbar(grouped.index, grouped['mean'], yerr=grouped['std'], fmt='o', color
 # plt.scatter(grouped.index, grouped['mean'], s=100, c='r', marker='o', label='Mean')  # 使用绿色表示均值
 # plt.bar(grouped.index, grouped['mean'], yerr=grouped['std'], color='blue', label='Mean ± Std Deviation')
 plt.xlabel('Number of Masks', fontsize=16)
-plt.ylabel('Time of SAM (s)', fontsize=16)
+# plt.ylabel('Time of SAM (s)', fontsize=16)
+plt.ylabel('Time of SGML (s)', fontsize=16)
 # plt.title('Time vs. Number of Masks')
 plt.legend(fontsize=16)
 plt.grid(True)
-save_path = csv_file.replace(csv_file.split('/')[-1], 'sam_time.pdf')
+# save_path = csv_file.replace(csv_file.split('/')[-1], 'sam_time.pdf')
+save_path = csv_file.replace(csv_file.split('/')[-1], 'sgml_time2.pdf')
 plt.savefig(save_path, bbox_inches='tight')
 print('Save time figure to {}'.format(save_path))
 plt.show()

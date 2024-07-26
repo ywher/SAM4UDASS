@@ -1,0 +1,4 @@
+tqdm
+natsort
+pandas
+opencv-python

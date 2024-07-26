@@ -36,7 +36,7 @@ class SegmentationMetrics:
                 iou = self.calculate_iou(pred_class, gt_class)
             class_iou.append(iou)
         if self.num_classes == 16:
-            #remove the iou of 9,14,16
+            #remove the iou of 9, 14, 16
             class_iou.remove(class_iou[16])
             class_iou.remove(class_iou[14])
             class_iou.remove(class_iou[9])

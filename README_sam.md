@@ -22,6 +22,7 @@ The code requires `python>=3.8`, as well as `pytorch>=1.7` and `torchvision>=0.8
 Install Segment Anything:
 
 ```
+
 pip install git+https://github.com/facebookresearch/segment-anything.git
 ```
 
@@ -38,7 +39,7 @@ The following optional dependencies are necessary for mask post-processing, savi
 pip install opencv-python pycocotools matplotlib onnxruntime onnx
 ```
 
-## <a name="GettingStarted"></a>Getting Started
+## `<a name="GettingStarted"></a>`Getting Started
 
 First download a [model checkpoint](#model-checkpoints). Then the model can be used in just a few lines to get masks from a given prompt:
 
@@ -86,7 +87,7 @@ See the [example notebook](https://github.com/facebookresearch/segment-anything/
 
 The `demo/` folder has a simple one page React app which shows how to run mask prediction with the exported ONNX model in a web browser with multithreading. Please see [`demo/README.md`](https://github.com/facebookresearch/segment-anything/blob/main/demo/README.md) for more details.
 
-## <a name="Models"></a>Model Checkpoints
+## `<a name="Models"></a>`Model Checkpoints
 
 Three model versions of the model are available with different backbone sizes. These models can be instantiated by running
 

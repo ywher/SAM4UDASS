@@ -69,7 +69,7 @@ parser.add_argument(
 )
 
 parser.add_argument("--num_samples", type=int, default=500, help="Number of images to generate. -1 for all")
-parser.add_argument("--count_time", type=bool, default=True, help="Count time for each image.")
+parser.add_argument("--count_time", type=bool, default=False, help="Count time for each image.")
 
 amg_settings = parser.add_argument_group("AMG Settings")
 

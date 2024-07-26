@@ -5,7 +5,10 @@ import numpy as np
 class Mask_Shape:
     def __init__(self, image):
         self.image = image
-        self.gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        if len(image.shape) == 3:
+            self.gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            self.gray = image
         self.contours, _ = cv2.findContours(self.gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         self.contour = self.contours[0]
         self.peri = cv2.arcLength(self.contour, True)

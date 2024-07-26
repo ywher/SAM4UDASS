@@ -1,29 +1,57 @@
-###dianyuan
+### dianyuan ###
 # python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
 # --input '/media/ywh/1/yanweihao/dataset/dianyuan_driving/image_2' --output 'outputs/dianyuan'
 
-# python scripts/amg.py --model-type 'vit_l' --checkpoint 'models/sam_vit_l_0b3195.pth' \
-# --input '/media/ywh/1/yanweihao/dataset/dianyuan_driving/image_2' --output 'outputs/dianyuan'
-
-# python scripts/amg.py --model-type 'vit_b' --checkpoint 'models/sam_vit_b_01ec64.pth' \
-# --input '/media/ywh/1/yanweihao/dataset/dianyuan_driving/image_2' --output 'outputs/dianyuan'
-
-###cityscapes
+### cityscapes ###
 # python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
 # --input '/media/ywh/1/yanweihao/dataset/cityscapes_original/gtFine_trainvaltest/leftImg8bit/unsup_single/augsburg' --output 'outputs/cityscapes/unsup_single/augsburg'
 
-CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
---input '/media/cyber-fx/ywh_disk/datasets/cityscapes/leftImg8bit/train_all' \
---output 'outputs/cityscapes/train3' \
---num_samples 500 \
---count_time true \
---points-per-side 64 \
+# --model-type "vit_l" "vit_b"
+# --checkpoint "sam_vit_l_0b3195.pth" "sam_vit_h_4b8939.pth" "sam_vit_b_01ec64.pth"
+
+# CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'vit_b' --checkpoint 'models/sam_vit_b_01ec64.pth' \
+# --input '/media/ywh/1/yanweihao/dataset/cityscapes_original/gtFine_trainvaltest/leftImg8bit/train_all' \
+# --output 'outputs/cityscapes/train_vitb_default' \
+# --num_samples 500 \
+# --begin_index 0 \
+# --points-per-side 32 \
+# --pred-iou-thresh 0.86 \
+# --stability-score-thresh 0.92 \
+# --crop-n-layers 1 \
+# --crop-n-points-downscale-factor 2 \
+# --min-mask-region-area 100 \
+# --count_time True
+
+### DensePASS ###
+# for folder in 'Canberra' 'Melbourne' 'Nottingham' 'Amsterdam' 'Manila' 'Capetown' 'Edinburgh' 'Jakarta' 'Zagreb' 'Auckland' 'Bangkok' 'Osaka' 'Saopaulo' 'Florence' 'Yokohama' 'Chicago' 'Glasgow' 'Helsinki' 'Turin' 'Singapore' 'Toronto' 'Oslo' 'Seoul' 'Barcelona' 'Lisbon' 'Sandiego' 'Buenosaires' 'Dublin' 'Moscow' 'Athens' 'Copenhagen' 'Montreal' 'Istanbul' 'Mexicocity' 'Stockholm' 'Marseille' 'Brussel' 'Bremen' 'Zurich' 'Hochiminhcity'
+# do
+#     CUDA_VISIBLE_DEVICES=1 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
+#     --input "/media/ywh/1/yanweihao/dataset/DensePASS/leftImg8bit/${folder}" \
+#     --output "outputs/DensePASS/${folder}" \
+#     --num_samples 50 \
+#     --points-per-side 32 \
+#     --pred-iou-thresh 0.86 \
+#     --stability-score-thresh 0.92 \
+#     --crop-n-layers 1 \
+#     --crop-n-points-downscale-factor 2 \
+#     --min-mask-region-area 100
+# done
+
+CUDA_VISIBLE_DEVICES=1 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
+--input "/media/ywh/1/yanweihao/dataset/DensePASS/leftImg8bit/val" \
+--output "outputs/DensePASS_val/vith_masks" \
+--num_samples 100 \
+--points-per-side 32 \
 --pred-iou-thresh 0.86 \
 --stability-score-thresh 0.92 \
 --crop-n-layers 1 \
 --crop-n-points-downscale-factor 2 \
---min-mask-region-area 100 \
+--min-mask-region-area 100
 
+# --count_time false \
+###new added from where?
+
+# 64 0.86 0.92 1 2 100
 
 # for folder in sjtu7 sjtu9
 # do
@@ -38,7 +66,7 @@ CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'default' --checkpoint
 #     --min-mask-region-area 100
 # done
 
-### sjtu
+### sjtu ###
 # CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
 # --input '/media/ywh/1/yanweihao/dataset/sjtu/image/train/sjtu1' \
 # --output '/media/ywh/Elements/projects/sam/outputs/sjtu1' \
@@ -64,7 +92,7 @@ CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'default' --checkpoint
 #--checkpoint sam_vit_h_4b8939, sam_vit_l_0b3195, sam_vit_b_01ec64
 # --mode-type 'vit_l' 'vit_b'
 
-###acdc
+### acdc ###
 # python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
 # --input '/media/ywh/1/yanweihao/dataset/acdc/rgb_anon/train' --output 'outputs/ACDC/train'
 
@@ -113,17 +141,17 @@ CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'default' --checkpoint
 # CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
 # --input '/media/ywh/1/yanweihao/dataset/kyxz/image/train/scene3' --output 'outputs/kyxz/scene3'
 
-#miyuan parking
+### miyuan parking ###
 # for dir in front left right rear
 # do
 #     CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
 #     --input '/media/ywh/1/yanweihao/dataset/miyuan_parking/'$dir --output 'outputs/miyuan_parking/'$dir
 # done
 
-#fenxian camera
+### fenxian camera ###
 # CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
 # --input '/media/ywh/1/yanweihao/projects/MTMC/AIC21-MTMC/datasets_fenxian/detection/132_crop' --output 'outputs/fenxian/132'
 
-#ivfc_zhuitong
+### ivfc_zhuitong ###
 # CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
 # --input '/media/ywh/1/yanweihao/dataset/ivfc/zhuitong/output_frames' --output 'outputs/ivfc/zhuitong'
