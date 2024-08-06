@@ -12,7 +12,7 @@ build/
 dist/
 wheels/
 *.png
-*.jpg
+# *.jpg
 *.csv
 *.mp4
 images/
