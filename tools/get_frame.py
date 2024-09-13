@@ -28,7 +28,7 @@ def extract_frames_from_video(video_path, output_folder):
 
 if __name__ == "__main__":
     video_path = "/home/ywh/Videos/zhuitong.mp4"
-    output_folder = "/media/ywh/1/yanweihao/dataset/ivfc/zhuitong/output_frames"
+    output_folder = "/media/ywh/pool1/yanweihao/dataset/ivfc/zhuitong/output_frames"
 
     extract_frames_from_video(video_path, output_folder)
 

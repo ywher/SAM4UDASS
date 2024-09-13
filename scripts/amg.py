@@ -68,6 +68,7 @@ parser.add_argument(
     ),
 )
 
+parser.add_argument("--begin_index", type=int, default=0, help="The index of the first image to process.")
 parser.add_argument("--num_samples", type=int, default=500, help="Number of images to generate. -1 for all")
 parser.add_argument("--count_time", type=bool, default=False, help="Count time for each image.")
 
@@ -218,7 +219,7 @@ def main(args: argparse.Namespace) -> None:
             targets = [
             f for f in natsorted(os.listdir(args.input)) if not os.path.isdir(os.path.join(args.input, f))
                         ]
-            targets = targets[: args.num_samples]
+            targets = targets[args.begin_index : args.num_samples]
         targets = [os.path.join(args.input, f) for f in targets]
 
     os.makedirs(args.output, exist_ok=True)

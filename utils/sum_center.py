@@ -49,7 +49,7 @@ def visualize_statistics(centers, statistics_array):
 if __name__ == '__main__':
     # 输入真值路径, 和想要统计的类别ID, 注意修改命名
     # cityscapes
-    # label_folder = "/media/ywh/1/yanweihao/dataset/cityscapes_original/gtFine_trainvaltest/gtFine/train_all"  # 替换为您的数据集标签图像文件夹路径
+    # label_folder = "/media/ywh/pool1/yanweihao/dataset/cityscapes_original/gtFine_trainvaltest/gtFine/train_all"  # 替换为您的数据集标签图像文件夹路径
     # label_id = 0  # 替换为您需要统计的类别标签I
     # acdc
     # label_folder = "/media/ywh/1/yanweihao/projects/uda/DAFormer/data/acdc/gt/train"

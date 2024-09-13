@@ -10,12 +10,10 @@ import json
 import shutil
 from tqdm import tqdm
 import argparse
-import natsort
 
 def sort_masks(folder_path):
     folder_list = os.listdir(folder_path)
-    folder_list = natsort.natsorted(folder_list)
-    # folder_list.sort()
+    folder_list.sort()
     folder_dict = {}
 
     for folder_name in tqdm(folder_list, desc='Processing folders'):
@@ -53,8 +51,7 @@ def sort_masks(folder_path):
             folder_dict[folder_name][original_name] = new_file_name
 
         csv_path = os.path.join(folder_dir, 'metadata.csv')
-        if os.path.isfile(csv_path):
-            shutil.move(csv_path, os.path.join(tmp_folder_dir, 'metadata.csv'))
+        shutil.move(csv_path, os.path.join(tmp_folder_dir, 'metadata.csv'))
 
         # Remove the original folder and rename the temporary folder to the original folder name
         shutil.rmtree(folder_dir)
@@ -77,7 +74,5 @@ if __name__ == '__main__':
 
     # Save the mapping dictionary to a JSON file
     # output_file = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/ACDC/mapping_train2.json'
-    if not os.path.exists(os.path.dirname(args.output_file)):
-        os.makedirs(os.path.dirname(args.output_file))
     with open(args.output_file, 'w') as f:
         json.dump(mapping_dict, f, indent=2)
