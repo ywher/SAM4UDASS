@@ -18,15 +18,13 @@ Semantic segmentation plays a critical role in enabling intelligent vehicles to 
 
 ## Environment Setup
 
+1. First, install the SAM (segment anything model) environment according to the README_sam.md
 
 ## Dataset Preparation
 
-
 ## Usage Example
 
-
 ## Acknowledgement
-
 
 ## Citation
 
