@@ -6,7 +6,7 @@ function: 将一个文件夹下的图片按照城市名进行分类,并将图片
 '''
 
 # 图片所在文件夹路径
-img_folder = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs/local-exp7/230524_2319_gta2cs_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_6283e/trainid'
+img_folder = '/media/ywh/pool1/yanweihao/projects/uda/DAFormer/work_dirs/local-exp7/230524_2319_gta2cs_dacs_a999_fdthings_rcs001_cpl_daformer_sepaspp_mitb5_poly10warm_s0_6283e/trainid'
 
 # 遍历图片文件夹下的所有文件，统计出现过的城市名
 city_set = set()

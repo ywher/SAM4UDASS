@@ -38,25 +38,31 @@ def calculate_centers_and_rectangles(label_folder, label_id):
 
     return centers, statistics_array
 
-def visualize_statistics(centers, statistics_array):
+def visualize_statistics(centers, statistics_array, center_npy_name):
     # 可视化统计结果
     plt.imshow(statistics_array, cmap='gray')
     plt.scatter([center[0] for center in centers], [center[1] for center in centers], c='red', marker='.')
     plt.axis('off')
-    plt.savefig('centers.png', dpi=300, bbox_inches='tight', pad_inches=0.0)
+    plt.savefig(f'{center_npy_name.split(".")[0]}.png', dpi=300, bbox_inches='tight', pad_inches=0.0)
     plt.show()
 
 if __name__ == '__main__':
     # 输入真值路径, 和想要统计的类别ID, 注意修改命名
     # cityscapes
-    # label_folder = "/media/ywh/pool1/yanweihao/dataset/cityscapes_original/gtFine_trainvaltest/gtFine/train_all"  # 替换为您的数据集标签图像文件夹路径
-    # label_id = 0  # 替换为您需要统计的类别标签I
+    label_folder = "/media/ywh/pool1/yanweihao/dataset/cityscapes_original/gtFine_trainvaltest/gtFine/train_all"  # 替换为您的数据集标签图像文件夹路径
+    label_id = 0  # 替换为您需要统计的类别标签I
+    center_npy_name = 'cityscapes_road_centers.npy'
     # acdc
-    # label_folder = "/media/ywh/1/yanweihao/projects/uda/DAFormer/data/acdc/gt/train"
+    # label_folder = "/media/ywh/pool1/yanweihao/projects/uda/DAFormer/data/acdc/gt/train"
     # label_id = 10
-    # centers, statistics_array = calculate_centers_and_rectangles(label_folder, label_id)
-    # np.save('sky_centers.npy', statistics_array)
-    # visualize_statistics(centers, statistics_array)
+    # center_npy_name = 'acdc_sky_centers.npy'
+    # label_id = 0  # 替换为您需要统计的类别标签I
+    # center_npy_name = 'acdc_road_centers.npy'
+    
+    # cal centers and statistics and save to npy
+    centers, statistics_array = calculate_centers_and_rectangles(label_folder, label_id)
+    np.save(center_npy_name, statistics_array)
+    visualize_statistics(centers, statistics_array, center_npy_name)
     
     # file_name = 'acdc_sky_centers.npy'
     # center_npt = np.load(file_name)
@@ -73,8 +79,8 @@ if __name__ == '__main__':
     # import numpy as np
     # import matplotlib.pyplot as plt
 
-    # 加载.npy文件
-    array = np.load('acdc_sky_centers.npy')
+    ### 加载.npy文件
+    array = np.load(center_npy_name)
     indices = np.nonzero(array)
 
     # 提取最小和最大的非零位置坐标

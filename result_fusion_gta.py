@@ -11,51 +11,63 @@ from config import config_gta as config
 
 
 if __name__ == '__main__':
-    # folder pathes
+    ### folder pathes
+    # the path to the sam mask
     mask_folder = config.mask_folder
+    mask_folder_suffix = config.mask_folder_suffix
     mask_suffix = config.mask_suffix
-    # the path to the model prediction
+
+    # the path to the model prediction id, entropy and confidence
     segmentation_folder = config.segmentation_folder
     segmentation_suffix = config.segmentation_suffix
     segmentation_suffix_noimg = config.segmentation_suffix_noimg
-    # 
+
     confidence_folder = config.confidence_folder
     confidence_suffix = config.confidence_suffix
+
     entropy_folder = config.entropy_folder
     entropy_suffix = config.entropy_suffix
 
     # the path to the original image
     image_folder = config.image_folder
     image_suffix = config.image_suffix
+
     # the path to the ground truth
     gt_folder = config.gt_folder
     gt_suffix = config.gt_suffix
+
     # the path to the output folder
     output_folder = config.output_folder
 
-    #num of classes
+    # num of classes
     num_classes = config.num_classes
 
     ### fusion parameters
-    # the fusion mode
-    fusion_mode = config.fusion_mode
-    road_assumption = config.road_assumption
-    road_center_rect = config.road_center_rect
+    # sgml process
     get_sam_mode= config.get_sam_mode
     use_sgml = config.use_sgml
-    sam_alpha = config.sam_alpha
-    adaptive_ratio = config.adaptive_ratio
+
+    # C_l and C_s classes
     large_classes = config.large_classes  # [0, 1, 2, 8, 10, 13]
     small_classes = config.small_classes  # [3, 4, 5, 6, 7, 9, 11, 12, 14, 15, 16, 17, 18]
+
+    # sam alpha
+    sam_alpha = config.sam_alpha
+    adaptive_ratio = config.adaptive_ratio
+
+    # road assumption
+    road_assumption = config.road_assumption
+    road_center_rect = config.road_center_rect
+
+    # the fusion mode
+    fusion_mode = config.fusion_mode
+
     sam_classes = config.sam_classes  # 11 classes, 5, 6, 7, 
     shrink_num = config.shrink_num
 
     if 'BiSeNet-uda' in config.segmentation_folder:
         confidence_threshold = config.confidence_threshold_tufl
         entropy_ratio = config.entropy_ratio_tufl
-    elif 'HRDA' in config.segmentation_folder:
-        confidence_threshold = config.confidence_threshold_hrda
-        entropy_ratio = config.entropy_ratio_hrda
     elif 'MIC' in config.segmentation_folder:
         confidence_threshold = config.confidence_threshold_mic
         entropy_ratio = config.entropy_ratio_mic
@@ -87,42 +99,44 @@ if __name__ == '__main__':
     debug_num = config.debug_num # 2975
     begin_index = config.begin_index # 0
 
-    fusion = Fusion_GTA(mask_folder, 
-                        mask_suffix,
-                        segmentation_folder, 
-                        segmentation_suffix,
-                        segmentation_suffix_noimg,
-                        confidence_folder, 
-                        confidence_suffix,
-                        entropy_folder,
-                        entropy_suffix,
-                        image_folder, 
-                        image_suffix,
-                        gt_folder, 
-                        gt_suffix,
-                        output_folder,
-                        num_classes,
-                        fusion_mode,
-                        road_assumption,
-                        road_center_rect,
-                        get_sam_mode,
-                        sam_alpha,
-                        adaptive_ratio,
-                        large_classes,
-                        small_classes,
-                        sam_classes,
-                        shrink_num,
-                        display_size,
-                        mix_ratio,
-                        resize_ratio,
-                        time_process,
-                        time_filename,
-                        save_sgml_process,
-                        save_majority_process,
-                        save_f1_process, 
-                        save_f2_process, 
-                        save_f3_process
-                        )
+    fusion = Fusion_GTA(mask_folder,
+                    mask_folder_suffix,
+                    mask_suffix,
+                    segmentation_folder, 
+                    segmentation_suffix,
+                    segmentation_suffix_noimg,
+                    confidence_folder, 
+                    confidence_suffix,
+                    entropy_folder,
+                    entropy_suffix,
+                    image_folder, 
+                    image_suffix,
+                    gt_folder, 
+                    gt_suffix,
+                    output_folder,
+                    num_classes,
+                    fusion_mode,
+                    road_assumption,
+                    road_center_rect,
+                    get_sam_mode,
+                    use_sgml,
+                    sam_alpha,
+                    adaptive_ratio,
+                    large_classes,
+                    small_classes,
+                    sam_classes,
+                    shrink_num,
+                    display_size,
+                    mix_ratio,
+                    resize_ratio,
+                    time_process,
+                    time_filename,
+                    save_sgml_process,
+                    save_majority_process,
+                    save_f1_process, 
+                    save_f2_process, 
+                    save_f3_process
+                    )
     
 
     index_range = list(range(begin_index, begin_index + debug_num))
@@ -164,9 +178,9 @@ if __name__ == '__main__':
     for i in index_range:
         # get the image name
         image_name = fusion.image_names[i]  # aachen_000000_000019_leftImg8bit
-        image_name = image_name.replace('_leftImg8bit', '') # aachen_000000_000019
+        image_name = image_name.replace(mask_folder_suffix, '') # aachen_000000_000019
         
-        # get the prediction
+        # get the uda prediction
         # aachen_000000_000019_leftImg8bittrainID.png
         prediction_path = os.path.join(fusion.segmentation_folder, image_name + fusion.segmentation_suffix) 
         if fusion.segmentation_suffix_noimg:
@@ -203,6 +217,7 @@ if __name__ == '__main__':
         # get the sam segmentation result using the mask
         sam_pred_sgml, sam_pred_majority = fusion.get_sam_pred(image_name, uda_pred, confidence_mask, entropy_mask)  # [h,w]
         sam_color_sgml = fusion.color_segmentation(sam_pred_sgml)  # [h,w,3]
+        sam_majority_color = fusion.color_segmentation(sam_pred_majority) # [h,w,3]
         
         if use_sgml:
             sam_pred = sam_pred_sgml
@@ -212,38 +227,36 @@ if __name__ == '__main__':
         
         image_filename = image_name + fusion.mask_suffix
         
-        # initialize the fusion color results and error images with black image
+        # Initialize the black image and ignore label image only once
         black_img = np.zeros((original_image.shape[0], original_image.shape[1], 3), dtype=np.uint8)
-        fusion_color_bg_1, fusion_color_bg_2, fusion_color_bg_3, fusion_color_bg_4, fusion_color_bg_5 = black_img, black_img, black_img, black_img, black_img
-        error_1, error_2, error_3, error_4, error_5 = black_img, black_img, black_img, black_img, black_img
-        
-        # initialize fusion trainid with 255 one-channel image
-        ignore_lb = np.ones((original_image.shape[0], original_image.shape[1]), dtype=np.uint8) * 255
-        fusion_trainid_bg_1, fusion_trainid_bg_2, fusion_trainid_bg_3, fusion_trainid_bg_4, fusion_trainid_bg_5 = ignore_lb, ignore_lb, ignore_lb, ignore_lb, ignore_lb
+        ignore_lb = np.full((original_image.shape[0], original_image.shape[1]), 255, dtype=np.uint8)
+
+        # Use list comprehensions or tuples to create multiple copies
+        fusion_color_bg_list = [black_img.copy() for _ in range(5)]
+        error_list = [black_img.copy() for _ in range(5)]
+        fusion_trainid_bg_list = [ignore_lb.copy() for _ in range(5)]
+
+        # Unpack lists if needed to assign to individual variables
+        fusion_color_bg_1, fusion_color_bg_2, fusion_color_bg_3, fusion_color_bg_4, fusion_color_bg_5 = fusion_color_bg_list
+        error_1, error_2, error_3, error_4, error_5 = error_list
+        fusion_trainid_bg_1, fusion_trainid_bg_2, fusion_trainid_bg_3, fusion_trainid_bg_4, fusion_trainid_bg_5 = fusion_trainid_bg_list
+
         
         # get fusion result from 1, 2, 3, 4, 5
-        fusion_trainid_bg_1, fusion_color_bg_1 = \
-            fusion.fusion_mode_1(uda_pred=uda_pred, sam_pred=sam_pred, image_name=image_name)
+        fusion_trainid_bg_1, fusion_color_bg_1 = fusion.fusion_mode_1(uda_pred=uda_pred, sam_pred=sam_pred, image_name=image_name)
         if save_sam_result:
-            fusion_trainid_bg_1_majority, fusion_color_bg_1_majority = \
-                fusion.fusion_mode_1(uda_pred=uda_pred, sam_pred=sam_pred_majority, image_name=image_name)
-        fusion_trainid_bg_2, fusion_color_bg_2 = \
-            fusion.fusion_mode_2(uda_pred=uda_pred, sam_pred=sam_pred, image_name=image_name)
-        fusion_trainid_bg_3, fusion_color_bg_3 = \
-            fusion.fusion_mode_3(uda_pred=uda_pred, sam_pred=sam_pred, fusion_trainid=fusion_trainid_bg_1,
-                                confidence_mask=confidence_mask, entropy_mask=entropy_mask,
-                                image_name=image_name)
-        # fusion_trainid_bg_4, fusion_color_bg_4 = \
-        #     fusion.fusion_mode_4(uda_pred=uda_pred, sam_pred=sam_pred, \
-        #                          fusion_trainid=fusion_trainid_bg_3, confidence_mask=confidence_mask)
-        # fusion_trainid_bg_5, fusion_color_bg_5 = \
-        #     fusion.fusion_mode_5(uda_pred=uda_pred, sam_pred=sam_pred, \
-        #                          fusion_trainid=fusion_trainid_bg_3, entropy_mask=entropy_mask)
+            fusion_trainid_bg_1_majority, fusion_color_bg_1_majority = fusion.fusion_mode_1(uda_pred=uda_pred, sam_pred=sam_pred_majority, image_name=image_name)
+        fusion_trainid_bg_2, fusion_color_bg_2 = fusion.fusion_mode_2(uda_pred=uda_pred, sam_pred=sam_pred, image_name=image_name)
+        fusion_trainid_bg_3, fusion_color_bg_3 = fusion.fusion_mode_3(uda_pred=uda_pred, sam_pred=sam_pred, fusion_trainid=fusion_trainid_bg_1,
+                                                                        confidence_mask=confidence_mask, entropy_mask=entropy_mask, image_name=image_name)
+        # fusion_trainid_bg_4, fusion_color_bg_4 = fusion.fusion_mode_4(uda_pred=uda_pred, sam_pred=sam_pred, \
+        #                                                               fusion_trainid=fusion_trainid_bg_3, confidence_mask=confidence_mask)
+        # fusion_trainid_bg_5, fusion_color_bg_5 = fusion.fusion_mode_5(uda_pred=uda_pred, sam_pred=sam_pred, \
+        #                                                               fusion_trainid=fusion_trainid_bg_3, entropy_mask=entropy_mask)
         
         # save the sam result
         if save_sam_result:
-            sam_majority_color = fusion.color_segmentation(sam_pred_majority) # [h,w,3]
-            # save sam majority and sam sgml pseudo label
+            # save sam psuedo label using majority voting and sgml
             cv2.imwrite(os.path.join(sam_majority_output_folder, image_filename), sam_pred_majority)
             cv2.imwrite(os.path.join(sam_majority_color_output_folder, image_filename), sam_majority_color)
             cv2.imwrite(os.path.join(sam_sgml_output_folder, image_filename), sam_pred_sgml)
@@ -274,7 +287,7 @@ if __name__ == '__main__':
             fusion_color_bg_1, fusion_color_bg_2, fusion_color_bg_3, fusion_color_bg_4, fusion_color_bg_5, \
             error_1, error_2, error_3, error_4, error_5, \
             confidence_map, entropy_map, confidence_img, entropy_img], \
-            '{}'.format(image_name), \
+            image_name, \
             [(miou_0, ious_0), (miou_1, ious_1), (miou_2, ious_2), \
             (miou_3, ious_3), (miou_4, ious_4), (miou_5, ious_5)], \
             [confidence_threshold, entropy_threshold])
@@ -282,7 +295,7 @@ if __name__ == '__main__':
         # save the mious and ious
         miou_values = [miou_0, miou_1, miou_2, miou_3, miou_4, miou_5]
         ious_values = [ious_0, ious_1, ious_2, ious_3, ious_4, ious_5]
-        fusion.save_ious(miou_values, ious_values, '{}'.format(image_name))
+        fusion.save_ious(miou_values, ious_values, image_name)
         
         # save all fusion results
         if save_all_fusion:

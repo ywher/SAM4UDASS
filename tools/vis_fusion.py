@@ -56,7 +56,7 @@ def show_images(folder_count, rows, cols, folder_paths):
 folder_count = 8
 rows = 2
 cols = 4
-target_folder = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/cityscapes/fusion2'
+target_folder = '/media/ywh/pool1/yanweihao/projects/segmentation/segment-anything/outputs/cityscapes/fusion2'
 
 folder_paths = [os.path.join(target_folder, pth) for pth in os.listdir(target_folder)]
 folder_paths.sort()

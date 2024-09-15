@@ -84,7 +84,7 @@ def process_images(mask_folder, image_folder, output_folder, mix_ratio=0.5, mask
 def get_parse():
     parse = argparse.ArgumentParser()
     parse.add_argument('--mask_folder', type=str, help='the path to the segment anything result',
-                       default='/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/dianyuan')
+                       default='/media/ywh/pool1/yanweihao/projects/segmentation/segment-anything/outputs/dianyuan')
     parse.add_argument('--image_folder', type=str, help='the path to the original image path',
                        default='/media/ywh/pool1/yanweihao/dataset/dianyuan_driving/image_2')
     parse.add_argument('--output_folder', type=str, help='output dir', default='outputs/dianyuan_mix')

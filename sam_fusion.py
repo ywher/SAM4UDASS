@@ -523,11 +523,11 @@ if __name__ == "__main__":
     # train is the folder of the generated mask, default sam params
     mask_folder = config.mask_folder
     # the path to the model prediction
-    # segmentation_root = '/media/ywh/1/yanweihao/projects/uda/DAFormer/work_dirs'
+    # segmentation_root = '/media/ywh/pool1/yanweihao/projects/uda/DAFormer/work_dirs'
     segmentation_folder = config.segmentation_folder
     confidence_folder = config.confidence_folder
     entropy_folder = config.entropy_folder
-    # segmentation_folder = '/media/ywh/1/yanweihao/projects/uda/MIC/seg/work_dirs/local-basic/230509_1455_gtaHR2csHR_mic_hrda_s2_108c1/pred_trainid'
+    # segmentation_folder = '/media/ywh/pool1/yanweihao/projects/uda/MIC/seg/work_dirs/local-basic/230509_1455_gtaHR2csHR_mic_hrda_s2_108c1/pred_trainid'
     # the path to the original image
     image_folder = config.image_folder
     # the path to the ground truth

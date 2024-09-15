@@ -54,7 +54,7 @@ if __name__ == '__main__':
     # save_filename = 'fog' ['fog', 'night', 'rain', 'snow']
     for save_filename in ['fog', 'night', 'rain', 'snow']:
         # 分析亮度
-        folder_path = "/media/ywh/1/yanweihao/projects/uda/DAFormer/data/acdc/rgb_anon/{}/train_all".format(save_filename)
+        folder_path = "/media/ywh/pool1/yanweihao/projects/uda/DAFormer/data/acdc/rgb_anon/{}/train_all".format(save_filename)
         print('Analyzing {} brightness'.format(save_filename))
         analyze_brightness(folder_path, save_filename)
         print('')

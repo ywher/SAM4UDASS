@@ -129,7 +129,7 @@ CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'vit_h' --checkpoint '
 
 ###school1
 # python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
-# --input '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/tools/school1' --output 'outputs/school1'
+# --input '/media/ywh/pool1/yanweihao/projects/segmentation/segment-anything/tools/school1' --output 'outputs/school1'
 
 ###kyxz
 # CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
@@ -150,7 +150,7 @@ CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'vit_h' --checkpoint '
 
 ### fenxian camera ###
 # CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \
-# --input '/media/ywh/1/yanweihao/projects/MTMC/AIC21-MTMC/datasets_fenxian/detection/132_crop' --output 'outputs/fenxian/132'
+# --input '/media/ywh/pool1/yanweihao/projects/MTMC/AIC21-MTMC/datasets_fenxian/detection/132_crop' --output 'outputs/fenxian/132'
 
 ### ivfc_zhuitong ###
 # CUDA_VISIBLE_DEVICES=0 python scripts/amg.py --model-type 'default' --checkpoint 'models/sam_vit_h_4b8939.pth' \

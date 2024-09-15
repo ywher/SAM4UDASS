@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # 读取CSV文件
-csv_file = '/media/ywh/1/yanweihao/projects/segmentation/segment-anything/outputs/cityscapes/train3/time.csv'  # 替换为实际的文件路径
+csv_file = '/media/ywh/pool1/yanweihao/projects/segmentation/segment-anything/outputs/cityscapes/train3/time.csv'  # 替换为实际的文件路径
 data = pd.read_csv(csv_file)
 
 # 根据mask数量分组并计算平均时间和方差
