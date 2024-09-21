@@ -58,15 +58,17 @@ gt_folder = f'{data_root}/gtFine/train_all'
 gt_suffix = '_gtFine_labelTrainIds.png'
 
 # output folder
-output_folder = 'outputs/cityscapes/daformer/daformer_gta_tmp' #这是去掉了mask按照名称排序的过程
+output_folder = 'outputs/cityscapes/daformer/daformer_gta_tmp2' #这是去掉了mask按照名称排序的过程
 
 # SAM mask labeling process
 get_sam_mode = 1
 use_sgml=True
 
 # C_s and C_l classes
-small_classes = [3, 4, 5, 6, 7, 9, 11, 12, 14, 15, 16, 17, 18] # [5, 6, 7, 11, 12, 13, 14, 15, 16, 17, 18]  # 11 classes, 5, 6, 7, 
+# small_classes = [3, 4, 5, 6, 7, 9, 11, 12, 14, 15, 16, 17, 18] # [5, 6, 7, 11, 12, 13, 14, 15, 16, 17, 18]  # 11 classes, 5, 6, 7, 
+small_classes = [3, 4, 5, 6, 7, 12, 14, 17, 18]
 large_classes = [0, 1, 2, 8, 10, 13]
+# large_classes = [0, 1, 2, 8, 9, 10, 11, 13, 15, 16]
 
 # sam_alpha
 sam_alpha = 0.2
@@ -112,7 +114,7 @@ save_f3_process = False
 
 ### time setting
 time_process = True
-time_filename = '2975_time1.txt'
+time_filename = '2975_time2.txt'
 
 # num of classes, 16 for synthia, 19 for gta5
 num_classes = 19
